@@ -1,0 +1,677 @@
+{
+  "$schema_version": 1,
+  "meta": {
+    "purpose": "Complete, verbatim harvest of every user-facing string, URL and asset reference from the legacy static site. This is the input to the session-2 seeders.",
+    "harvested_on": "2026-08-06",
+    "harvested_from": {
+      "repo": "https://github.com/SimonARG/portfolio",
+      "branch": "main",
+      "commit": "dfc5a33",
+      "files": ["index.html", "projects.html", "js/menu.js", "js/locale.js", "js/index.js", "js/projects.js"]
+    },
+    "conventions": {
+      "translatable": "Objects keyed by locale code: {\"es\":..., \"en\":..., \"ja\":...}. A null value means the legacy site had no variant for that locale.",
+      "verbatim": "Strings reproduce the rendered text content exactly, with HTML whitespace collapsed as a browser would collapse it. Spelling and grammar errors in the source are PRESERVED and listed under meta.source_defects.",
+      "legacy_inline_styles": "The legacy markup carried inline font-size/font-weight overrides on many Japanese strings. These are presentation, not content. They are recorded per-string under `legacy_style` so session 5 can solve CJK sizing properly in CSS, and MUST NOT be seeded as content.",
+      "description_blocks": "Project descriptions were <br>-separated pseudo-lists. `description_legacy_html` is the verbatim source fragment; `description_blocks` is its mechanical decomposition into {lead, items} so session 2 can render Markdown deterministically."
+    },
+    "source_defects": {
+      "note": "Verbatim harvest preserves these. Each needs a deliberate decision in session 2 — fix or keep. None have been silently corrected here.",
+      "copy_typos": [
+        {"where": "ui_strings.projects_title.en", "text": "PROYECTS", "should_be": "PROJECTS", "plan_defect": 1},
+        {"where": "profile.meta_description", "text": "Porfolio", "should_be": "Portfolio", "plan_defect": 3},
+        {"where": "profile.about.es", "text": "móbiles", "should_be": "móviles"},
+        {"where": "profile.about.en", "text": "adquire", "should_be": "acquire"},
+        {"where": "profile.about.en", "text": "Adobe's Creative Suit", "should_be": "Adobe's Creative Suite"},
+        {"where": "profile.about.en", "text": "the desktop suite's by Google", "should_be": "the desktop suites by Google"},
+        {"where": "profile.about.en", "text": "maitaining", "should_be": "maintaining"},
+        {"where": "projects.ambient.description.es", "text": "a través de laconfiguración", "should_be": "a través de la configuración"},
+        {"where": "projects.newtab.description.en", "text": "Addding", "should_be": "Adding"},
+        {"where": "projects.newtab.description.en", "text": "shorcuts", "should_be": "shortcuts"}
+      ],
+      "markup_defects": [
+        {"where": "profile.about.es / profile.about.en", "issue": "</br></br> used as a paragraph break instead of <br><br>", "plan_defect": 4},
+        {"where": "projects.ambient tech list", "issue": "</ñ> closing tags instead of </li>", "plan_defect": 2},
+        {"where": "projects.{mixtorrents,ambient,blog,portfolio} video source", "issue": "type=\"video/webm\" declared on an .mp4 file", "plan_defect": 5},
+        {"where": "social_links.rym / documents.*", "issue": "Single untranslated <span> — no per-locale variants exist in the legacy markup. Recorded as es-only with en/ja null."}
+      ],
+      "content_to_rewrite": [
+        {"where": "projects.portfolio.description", "issue": "Claims the site is built in vanilla HTML/CSS/JS. This rebuild makes that false. Session 2 must rewrite it in all three locales.", "plan_ref": "§4.2 step 6"}
+      ]
+    },
+    "coverage_checklist": {
+      "note": "Cross-check against REBUILD_PLAN.md §1.3. Every row must be present in this file.",
+      "profile": "name x3, about x3, email, github_url, linkedin_url, meta_title, meta_description",
+      "hero_lines": 3,
+      "menu_items": 5,
+      "social_links": 6,
+      "documents": 2,
+      "projects": 6,
+      "technologies": 9,
+      "ui_strings": 13,
+      "media": 15
+    }
+  },
+
+  "locales": [
+    {"code": "es", "name": "Spanish", "native_name": "Español", "is_default": true, "is_enabled": true, "sort_order": 1},
+    {"code": "en", "name": "English", "native_name": "English", "is_default": false, "is_enabled": true, "sort_order": 2},
+    {"code": "ja", "name": "Japanese", "native_name": "日本語", "is_default": false, "is_enabled": true, "sort_order": 3}
+  ],
+
+  "profile": {
+    "email": "simonchasnovsky@gmail.com",
+    "github_url": "https://github.com/SimonARG",
+    "linkedin_url": "https://www.linkedin.com/in/simonpaul99/",
+    "name": {
+      "es": "SIMÓN P. CHASNOVSKY",
+      "en": "SIMON P. CHASNOVSKY",
+      "ja": "サイモン・チャスノブスキ"
+    },
+    "name_presentation_note": "The Japanese name is marked up as <span>サイモン</span><span class=\"ja-dot\">・</span><br class=\"ja-space\"><span>チャスノブスキ</span>. Below 600px the interpunct is hidden and the <br> applies, so it renders on two lines; at wider widths the interpunct shows and the break is suppressed. The canonical string is the single line above; the wrap is a CSS concern.",
+    "meta_title": {
+      "es": "Simón Chasnovsky",
+      "en": null,
+      "ja": null
+    },
+    "meta_description": {
+      "es": "Simon Chasnovsky - Porfolio",
+      "en": null,
+      "ja": null
+    },
+    "about": {
+      "es": [
+        "Hola! Soy Simón Paul Chasnovsky, para usted, programador. Mi área de conocimiento general es full-stack web-dev manejando PHP (Laravel) y bases de datos SQL (MySQL) en el back-end, y HTML, CSS (SASS, PostCSS, TailwindCSS) y JavaScript (VueJS) en el front-end. Esto implica conocimiento de GIT, y también me gusta trabajar con C++, OpenGL y Java, principalmente en lo que aplica al desarrollo de video-juegos y aplicaciones de escritorio y móbiles (esto es más bien un hobby). Me interesa mucho la tecnología y en especial la computación, por lo que también con los años terminé con experiencia en la Suite Creativa de Adobe (Photoshop, Lightroom, Premiere, After-Effects, Illustrator, Audition), en las suites de oficina de Google y Microsoft (Word, Excel, Access, PowerPoint), y en hardware (planificación y construcción de computadoras de escritorio y servidores, manejo de redes y troubleshooting).",
+        "Si te agrada mi portafolios, no dudes en contactarme, seguramente sea una adición valiosa a tu equipo; y si querés saber más sobre mi, andá clickeando los links en esta página."
+      ],
+      "en": [
+        "Hi! I'm Simon Paul Chasnovsky, for you, programmer. My general knowledge area is full-stack web development with PHP (Laravel) and SQL databases (MySQL) in the backend, and HTML, CSS (SASS, PostCSS, TailwindCSS), and JavaScript (VueJS) in the frontend. I'm familiar with usage of GIT, and I also enjoy working on C++, OpenGL and Java, mainly for desktop and mobile application development (this is more on the hobby side of things). I'm very interested in technology, specially computing, which has led me to adquire experience in software like Adobe's Creative Suit (Photoshop, Lightroom, Premiere, After-Effects, Illustrator, Audition), and the desktop suite's by Google and Microsoft (Word, Excel, Access, PowerPoint). I also really enjoy working on hardware (planning, building, troubleshooting and maitaining computer and network systems).",
+        "If you like my portfolio, don't hesitate to contact me, I'd surely make a nice addition to your team; and if you want to know more about me, feel free to go around clicking the links in this page."
+      ],
+      "ja": [
+        "こんにちは！私はサイモン・ポール・チャスノブスキです。あなたにとって、プログラマーです。私の一般的な知識領域は、フルスタックのWeb開発であり、バックエンドではPHP（Laravel）とSQLデータベース（MySQL）を、フロントエンドではHTML、CSS（SASS、PostCSS、TailwindCSS）、JavaScript（VueJS）を扱います。これにはGITの知識も含まれます。また、C++、OpenGL、およびJavaでの作業も好みますが、これは主にゲーム開発やデスクトップおよびモバイルアプリケーション開発に関連しています（これは趣味としての活動です）。私はテクノロジーに非常に興味があり、特にコンピューティングに関心があります。そのため、Adobe Creative Suite（Photoshop、Lightroom、Premiere、After-Effects、Illustrator、Audition）、GoogleおよびMicrosoft Officeスイート（Word、Excel、Access、PowerPoint）、およびハードウェア（デスクトップおよびサーバーの計画と構築、ネットワーク管理とトラブルシューティング）の経験もあります。",
+        "私のポートフォリオが気に入ったら、お気軽にお問い合わせください。あなたのチームに素敵な追加となることを確約します。もし私についてもっと知りたい場合は、このページのリンクをクリックして、自由にご覧ください。"
+      ]
+    },
+    "about_legacy_style": {"ja": "font-size: 1.2rem;"}
+  },
+
+  "hero_lines": [
+    {
+      "locale_code": "es",
+      "role_label": "Programador",
+      "tech_string": "PHP HTML JS CSS",
+      "sort_order": 1
+    },
+    {
+      "locale_code": "en",
+      "role_label": "Programmer",
+      "tech_string": "LARAVEL SQL VUE",
+      "sort_order": 2
+    },
+    {
+      "locale_code": "ja",
+      "role_label": "プログラマー",
+      "tech_string": "GIT JAVA PYTHON C++",
+      "sort_order": 3
+    }
+  ],
+  "hero_lines_note": "These are NOT translations of one another. Three role labels in three languages, each paired with a DIFFERENT tech list. All three are visible simultaneously on the landing page, each with its own ES/EN/JA pill that switches the site language. Preserve that.",
+
+  "menu_items": [
+    {
+      "key": "about",
+      "kind": "popup",
+      "target": "about",
+      "legacy_icon": "fa-solid fa-address-card",
+      "sort_order": 1,
+      "label": {"es": "Sobre Mi", "en": "About Me", "ja": "私について"},
+      "legacy_style": {"ja": "font-size: 1.1rem; font-weight: 600;"}
+    },
+    {
+      "key": "github",
+      "kind": "external",
+      "target": "https://github.com/SimonARG",
+      "legacy_icon": "fa-brands fa-github",
+      "sort_order": 2,
+      "label": {"es": "GitHub", "en": "GitHub", "ja": "ギットハブ"},
+      "legacy_style": {"ja": "font-size: 1.1rem; font-weight: 600;"}
+    },
+    {
+      "key": "cv",
+      "kind": "popup",
+      "target": "cv",
+      "legacy_icon": "fa-solid fa-file",
+      "sort_order": 3,
+      "label": {"es": "CV", "en": "CV", "ja": "履歴書"},
+      "legacy_style": {"ja": "font-size: 1.1rem; font-weight: 600;"}
+    },
+    {
+      "key": "socials",
+      "kind": "popup",
+      "target": "socials",
+      "legacy_icon": "fa-solid fa-address-book",
+      "sort_order": 4,
+      "label": {"es": "Sociales", "en": "Socials", "ja": "ソーシャル"},
+      "legacy_style": {"ja": "font-size: 1.1rem; font-weight: 600;"}
+    },
+    {
+      "key": "linkedin",
+      "kind": "external",
+      "target": "https://www.linkedin.com/in/simonpaul99/",
+      "legacy_icon": "fa-brands fa-linkedin",
+      "sort_order": 5,
+      "label": {"es": "LinkedIn", "en": "LinkedIn", "ja": "ﾘﾝｹﾄﾞｲﾝ"},
+      "legacy_style": {"ja": "font-size: 1.5rem; font-weight: 600;"},
+      "note": "The Japanese label uses HALFWIDTH katakana (U+FF98 U+FF9D U+FF79 U+FF84 U+FF9E U+FF72 U+FF9D), unlike every other Japanese string on the site, which uses fullwidth. Almost certainly unintentional; the fullwidth form is リンクトイン. Flag for Simón in session 2."
+    }
+  ],
+  "menu_items_note": "The GitHub and LinkedIn rows are <div>s wired to window.open(..., '_blank') in js/menu.js — not anchors. In the rebuild they must be real <a> elements inside the <nav> list.",
+
+  "social_links": [
+    {
+      "key": "instagram",
+      "url": "https://www.instagram.com/heat.death_999/",
+      "legacy_icon": "fa-brands fa-square-instagram",
+      "sort_order": 1,
+      "is_published": true,
+      "label": {"es": "Instagram", "en": "Instagram", "ja": "インスタグラム"},
+      "legacy_style": {"ja": "font-size: 1.3rem; font-weight: 600;"}
+    },
+    {
+      "key": "linkedin",
+      "url": "https://www.linkedin.com/in/simonpaul99/",
+      "legacy_icon": "fa-brands fa-linkedin",
+      "sort_order": 2,
+      "is_published": true,
+      "label": {"es": "LinkedIn", "en": "LinkedIn", "ja": "リンクトイン"},
+      "legacy_style": {"ja": "font-size: 1.3rem; font-weight: 600;"}
+    },
+    {
+      "key": "facebook",
+      "url": "https://www.facebook.com/HitDeth99/",
+      "legacy_icon": "fa-brands fa-square-facebook",
+      "sort_order": 3,
+      "is_published": true,
+      "label": {"es": "Facebook", "en": "Facebook", "ja": "フェイスブック"},
+      "legacy_style": {"ja": "font-size: 1.3rem; font-weight: 600;"}
+    },
+    {
+      "key": "last_fm",
+      "url": "https://www.last.fm/user/Heat_Death_999",
+      "legacy_icon": "fa-brands fa-square-lastfm",
+      "sort_order": 4,
+      "is_published": true,
+      "label": {"es": "Last.FM", "en": "Last.FM", "ja": "ラスト.エフエム"},
+      "legacy_style": {"ja": "font-size: 1.3rem; font-weight: 600;"}
+    },
+    {
+      "key": "rym",
+      "url": "https://rateyourmusic.com/~SimonARG",
+      "legacy_icon": "fa-solid fa-headphones-simple",
+      "sort_order": 5,
+      "is_published": true,
+      "label": {"es": "RYM", "en": null, "ja": null},
+      "note": "Legacy markup has a single untranslated <span>RYM</span> with no locale classes, so it renders identically in all three languages. Session 2 should decide whether to fill en/ja (e.g. ja: レートユアミュージック) or keep the acronym everywhere."
+    },
+    {
+      "key": "letterboxd",
+      "url": "https://letterboxd.com/Heat_Death_999/",
+      "legacy_icon": "fa-solid fa-film",
+      "sort_order": 6,
+      "is_published": true,
+      "label": {"es": "Letterboxd", "en": "Letterboxd", "ja": "レッテルボックス"},
+      "legacy_style": {"ja": "font-size: 1.3rem; font-weight: 600;"}
+    }
+  ],
+
+  "documents": [
+    {
+      "key": "cv_es",
+      "locale_code": "es",
+      "legacy_path": "docs/CV-ES.pdf",
+      "sort_order": 1,
+      "is_published": true,
+      "label": {"es": "Español", "en": null, "ja": null},
+      "note": "Untranslated single <span> in the legacy markup. The label names the CV's language, not the UI language, so leaving it as the endonym is defensible."
+    },
+    {
+      "key": "cv_en",
+      "locale_code": "en",
+      "legacy_path": "docs/CV-EN.pdf",
+      "sort_order": 2,
+      "is_published": true,
+      "label": {"es": "English", "en": null, "ja": null}
+    }
+  ],
+  "documents_note": "There is no Japanese CV. The CV dialog therefore offers two entries in all three locales.",
+
+  "technologies": [
+    {"slug": "laravel", "name": "Laravel", "sort_order": 1},
+    {"slug": "php", "name": "PHP", "sort_order": 2},
+    {"slug": "mysql", "name": "MySQL", "sort_order": 3},
+    {"slug": "vuejs", "name": "VueJS", "sort_order": 4},
+    {"slug": "tailwindcss", "name": "TailwindCSS", "sort_order": 5},
+    {"slug": "html", "name": "HTML", "sort_order": 6},
+    {"slug": "css", "name": "CSS", "sort_order": 7},
+    {"slug": "js", "name": "JS", "sort_order": 8},
+    {"slug": "markdown", "name": "Markdown", "sort_order": 9}
+  ],
+  "technologies_note": "Untranslated by design (§2.4). Names are reproduced exactly as they appear in the legacy tech chips — 'JS' not 'JavaScript', 'VueJS' not 'Vue'.",
+
+  "projects": [
+    {
+      "key": "mpi",
+      "sort_order": 1,
+      "is_published": true,
+      "title": "PDA MPI",
+      "repo_url": null,
+      "live_url": null,
+      "technologies": ["laravel", "html", "css", "js", "vuejs", "tailwindcss", "mysql"],
+      "legacy_thumbnail": "imgs/mpi.avif",
+      "legacy_thumbnail_alt": "MPI",
+      "legacy_video": "vids/mpi.mp4",
+      "legacy_video_type": "video/mp4",
+      "legacy_video_muted": true,
+      "slug": {"es": "mpi", "en": "mpi", "ja": "mpi"},
+      "description_legacy_html": {
+        "es": "Módulo de Pedidos Internos (MPI) de la plataforma de e-commerce de Proveedores de América (PDA), con el fin de permitir el comercio interno de empresas. Permite:<br><br>-Iniciar sesión con una cuenta de la plataforma<br>-Personalizar y eliminar la cuenta de empleado interno<br>-Crear, editar y eliminar pedidos internos con distintas variables<br>-Crear, editar y eliminar bids para cada pedido<br>-Aprobar, rechazar, o proponer cambios a los pedidos, si el usuario es proveedor o admin",
+        "en": "Internal Requests Module for Proveedores de America's e-commerce platform, that enables companies to post and execute internal commercial requests. It allows:<br><br>-Logging in with a pre-existing PDA enterprise employee account<br>-Customize or delete the internal employee account<br>-Create, edit and delete internal requests with different variables<br>-Create, edit or delete bids for each internal request<br>-Approve, reject or propose changes to requests, if the user is a provider or admin",
+        "ja": "アメリカのプロベドーレスのeコマースプラットフォーム用の内部リクエストモジュールで、企業が内部商業リクエストを投稿および実行できるようにします。これにより、以下が可能になります：<br><br>・既存のPDA企業従業員アカウントでログイン<br>・内部従業員アカウントをカスタマイズまたは削除<br>・さまざまな変数を使用して内部リクエストを作成、編集、および削除<br>・各内部リクエストに対する入札を作成、編集、または削除<br>・ユーザーがプロバイダーまたは管理者である場合、リクエストを承認、拒否、または変更を提案することができます"
+      },
+      "description_blocks": {
+        "es": {
+          "lead": "Módulo de Pedidos Internos (MPI) de la plataforma de e-commerce de Proveedores de América (PDA), con el fin de permitir el comercio interno de empresas. Permite:",
+          "items": [
+            "Iniciar sesión con una cuenta de la plataforma",
+            "Personalizar y eliminar la cuenta de empleado interno",
+            "Crear, editar y eliminar pedidos internos con distintas variables",
+            "Crear, editar y eliminar bids para cada pedido",
+            "Aprobar, rechazar, o proponer cambios a los pedidos, si el usuario es proveedor o admin"
+          ]
+        },
+        "en": {
+          "lead": "Internal Requests Module for Proveedores de America's e-commerce platform, that enables companies to post and execute internal commercial requests. It allows:",
+          "items": [
+            "Logging in with a pre-existing PDA enterprise employee account",
+            "Customize or delete the internal employee account",
+            "Create, edit and delete internal requests with different variables",
+            "Create, edit or delete bids for each internal request",
+            "Approve, reject or propose changes to requests, if the user is a provider or admin"
+          ]
+        },
+        "ja": {
+          "lead": "アメリカのプロベドーレスのeコマースプラットフォーム用の内部リクエストモジュールで、企業が内部商業リクエストを投稿および実行できるようにします。これにより、以下が可能になります：",
+          "items": [
+            "既存のPDA企業従業員アカウントでログイン",
+            "内部従業員アカウントをカスタマイズまたは削除",
+            "さまざまな変数を使用して内部リクエストを作成、編集、および削除",
+            "各内部リクエストに対する入札を作成、編集、または削除",
+            "ユーザーがプロバイダーまたは管理者である場合、リクエストを承認、拒否、または変更を提案することができます"
+          ]
+        }
+      },
+      "note": "The only project with neither a repo nor a live demo — it is client work. Session 7's layout must not leave a hole where the action buttons go."
+    },
+    {
+      "key": "mixtorrents",
+      "sort_order": 2,
+      "is_published": true,
+      "title": "MIXTORRENTS",
+      "repo_url": "https://github.com/SimonARG/MixTorrents",
+      "live_url": null,
+      "technologies": ["laravel", "html", "css", "js", "markdown", "mysql"],
+      "legacy_thumbnail": "imgs/mixtorrents.jpg",
+      "legacy_thumbnail_alt": "MixTorrents",
+      "legacy_video": "vids/mixtorrents.mp4",
+      "legacy_video_type": "video/webm",
+      "legacy_video_muted": true,
+      "slug": {"es": "mixtorrents", "en": "mixtorrents", "ja": "mixtorrents"},
+      "description_legacy_html": {
+        "es": "Página web dinámica que actúa como repositorio de archivos torrent. Permite:<br><br>-Ver el index paginado de archivos subidos ordenados por fecha<br>-Crear, personalizar, editar, usar y eliminar cuentas de usuario<br>-Subir, ver, editar, descargar, y eliminar archivos<br>-Crear, editar y eliminar comentarios<br>-Buscar y filtrar archivos subidos",
+        "en": "Dynamic torrent file repository and tracker. It allows the user to:<br><br>-See the paginated index of uploaded files ordered by most recent<br>-Create, customize, edit, use and delete user accounts<br>-Upload, see, edit, download and delete files<br>-Create, edit and delete comments<br>-Search files with a variety of filters",
+        "ja": "ダイナミックなトレントファイルのリポジトリとトラッカー。ユーザーは以下の操作ができます：<br><br>・最新の順に並べ替えられたアップロードされたファイルのページネーションされた索引を見る<br>・ユーザーアカウントを作成、カスタマイズ、編集、使用、削除する<br>・ファイルをアップロード、表示、編集、ダウンロード、削除する<br>・コメントを作成、編集、削除する<br>・様々なフィルターでファイルを検索する"
+      },
+      "description_blocks": {
+        "es": {
+          "lead": "Página web dinámica que actúa como repositorio de archivos torrent. Permite:",
+          "items": [
+            "Ver el index paginado de archivos subidos ordenados por fecha",
+            "Crear, personalizar, editar, usar y eliminar cuentas de usuario",
+            "Subir, ver, editar, descargar, y eliminar archivos",
+            "Crear, editar y eliminar comentarios",
+            "Buscar y filtrar archivos subidos"
+          ]
+        },
+        "en": {
+          "lead": "Dynamic torrent file repository and tracker. It allows the user to:",
+          "items": [
+            "See the paginated index of uploaded files ordered by most recent",
+            "Create, customize, edit, use and delete user accounts",
+            "Upload, see, edit, download and delete files",
+            "Create, edit and delete comments",
+            "Search files with a variety of filters"
+          ]
+        },
+        "ja": {
+          "lead": "ダイナミックなトレントファイルのリポジトリとトラッカー。ユーザーは以下の操作ができます：",
+          "items": [
+            "最新の順に並べ替えられたアップロードされたファイルのページネーションされた索引を見る",
+            "ユーザーアカウントを作成、カスタマイズ、編集、使用、削除する",
+            "ファイルをアップロード、表示、編集、ダウンロード、削除する",
+            "コメントを作成、編集、削除する",
+            "様々なフィルターでファイルを検索する"
+          ]
+        }
+      }
+    },
+    {
+      "key": "newtab",
+      "sort_order": 3,
+      "is_published": true,
+      "title": "CHROME NEWTAB",
+      "repo_url": "https://github.com/SimonARG/chrome-newtab",
+      "live_url": null,
+      "technologies": ["html", "css", "js"],
+      "legacy_thumbnail": "imgs/newtab.avif",
+      "legacy_thumbnail_alt": "Chrome Newtab",
+      "legacy_video": "vids/newtab.mp4",
+      "legacy_video_type": "video/mp4",
+      "legacy_video_muted": true,
+      "slug": {"es": "newtab", "en": "newtab", "ja": "newtab"},
+      "description_legacy_html": {
+        "es": "Página de reemplazo para la \"nueva pestaña\" de Google Chrome. Permite:<br><br>-Elegir una imágen o gif como fondo de pantalla<br>-Elegir un ícono de pestaña<br>-Utilizar un renderizado customizado de los marcadores nativos de Chrome<br>-Añadir, editar y remover atajos<br>-Buscar la internet",
+        "en": "Replacement \"new tab\" page for the Google Chrome web browser. Allows:<br><br>-Setting a custom background image or gif<br>-Setting a custom tab icon<br>-Usage of a custom rendering of Chrome's native bookmarks<br>-Addding, editing or removing shorcuts<br>-Searching the internet",
+        "ja": "Google Chromeウェブブラウザの「新しいタブ」ページの置き換え。これにより、以下が可能になります：<br><br>・カスタム背景画像またはGIFの設定<br>・カスタムタブアイコンの設定<br>・Chromeのネイティブブックマークのカスタムレンダリングの使用<br>・ショートカットの追加、編集、または削除<br>・インターネットの検索"
+      },
+      "description_blocks": {
+        "es": {
+          "lead": "Página de reemplazo para la \"nueva pestaña\" de Google Chrome. Permite:",
+          "items": [
+            "Elegir una imágen o gif como fondo de pantalla",
+            "Elegir un ícono de pestaña",
+            "Utilizar un renderizado customizado de los marcadores nativos de Chrome",
+            "Añadir, editar y remover atajos",
+            "Buscar la internet"
+          ]
+        },
+        "en": {
+          "lead": "Replacement \"new tab\" page for the Google Chrome web browser. Allows:",
+          "items": [
+            "Setting a custom background image or gif",
+            "Setting a custom tab icon",
+            "Usage of a custom rendering of Chrome's native bookmarks",
+            "Addding, editing or removing shorcuts",
+            "Searching the internet"
+          ]
+        },
+        "ja": {
+          "lead": "Google Chromeウェブブラウザの「新しいタブ」ページの置き換え。これにより、以下が可能になります：",
+          "items": [
+            "カスタム背景画像またはGIFの設定",
+            "カスタムタブアイコンの設定",
+            "Chromeのネイティブブックマークのカスタムレンダリングの使用",
+            "ショートカットの追加、編集、または削除",
+            "インターネットの検索"
+          ]
+        }
+      }
+    },
+    {
+      "key": "ambient",
+      "sort_order": 4,
+      "is_published": true,
+      "title": "RE;NOISE",
+      "repo_url": "https://github.com/SimonARG/re-noise",
+      "live_url": "https://re-noise.simon-dev.com/",
+      "technologies": ["vuejs", "html", "css", "js"],
+      "legacy_thumbnail": "imgs/re;noise.avif",
+      "legacy_thumbnail_alt": "Re;Noise",
+      "legacy_video": "vids/ambiance.mp4",
+      "legacy_video_type": "video/webm",
+      "legacy_video_muted": false,
+      "slug": {"es": "re-noise", "en": "re-noise", "ja": "re-noise"},
+      "description_legacy_html": {
+        "es": "Webapp que permite al usuario crear su propio ruido ambiental de fondo a través de laconfiguración de varios sonidos individuales. Permite:<br><br>-Encender y apagar pistas de audio<br>-Pausar y reproducir audios encendidos<br>-Ajustar el volumen de audios individuales<br>-Cambiar pistas de audio<br>-Pausar, reproducir y cambiar el volumen maestro<br>-Cambiar el fondo de pantalla",
+        "en": "Pseudo-dynamic Vue3 webapp for the user to create their own ambient sound through the configuration of multiple audio tracks. It allows the user to:<br><br>-Turn on and off audio tracks<br>-Play and pause ambient sounds<br>-Individually adjust track volumes<br>-Change audio tracks<br>-Pause, play and change the overall volume through master controls<br>-Change the background image",
+        "ja": "ユーザーが複数のオーディオトラックを設定することで独自の環境音を作成できる、疑似ダイナミックなVue3ウェブアプリ。ユーザーは以下の操作ができます：<br><br>・オーディオトラックのオンとオフを切り替える<br>・環境音を再生および一時停止する<br>・トラックの音量を個別に調整する<br>・オーディオトラックを変更する<br>・マスターコントロールを介して全体の音量を一時停止、再生、変更する<br>・背景画像を変更する"
+      },
+      "description_blocks": {
+        "es": {
+          "lead": "Webapp que permite al usuario crear su propio ruido ambiental de fondo a través de laconfiguración de varios sonidos individuales. Permite:",
+          "items": [
+            "Encender y apagar pistas de audio",
+            "Pausar y reproducir audios encendidos",
+            "Ajustar el volumen de audios individuales",
+            "Cambiar pistas de audio",
+            "Pausar, reproducir y cambiar el volumen maestro",
+            "Cambiar el fondo de pantalla"
+          ]
+        },
+        "en": {
+          "lead": "Pseudo-dynamic Vue3 webapp for the user to create their own ambient sound through the configuration of multiple audio tracks. It allows the user to:",
+          "items": [
+            "Turn on and off audio tracks",
+            "Play and pause ambient sounds",
+            "Individually adjust track volumes",
+            "Change audio tracks",
+            "Pause, play and change the overall volume through master controls",
+            "Change the background image"
+          ]
+        },
+        "ja": {
+          "lead": "ユーザーが複数のオーディオトラックを設定することで独自の環境音を作成できる、疑似ダイナミックなVue3ウェブアプリ。ユーザーは以下の操作ができます：",
+          "items": [
+            "オーディオトラックのオンとオフを切り替える",
+            "環境音を再生および一時停止する",
+            "トラックの音量を個別に調整する",
+            "オーディオトラックを変更する",
+            "マスターコントロールを介して全体の音量を一時停止、再生、変更する",
+            "背景画像を変更する"
+          ]
+        }
+      },
+      "note": "The ONLY project whose <video> deliberately omits `muted` — Re;Noise is an ambient-sound app, so the audio is the demo. Preserve the audio track through the session-4 re-encode and give it a visible unmute control in session 7. Its thumbnail filename contains a semicolon (imgs/re;noise.avif) and must be renamed to re-noise.avif in session 4."
+    },
+    {
+      "key": "blog",
+      "sort_order": 5,
+      "is_published": true,
+      "title": "PHP BLOG",
+      "repo_url": "https://github.com/SimonARG/php-blog",
+      "live_url": null,
+      "technologies": ["php", "mysql", "html", "css", "js", "markdown"],
+      "legacy_thumbnail": "imgs/blog.avif",
+      "legacy_thumbnail_alt": "Blog",
+      "legacy_video": "vids/blog.mp4",
+      "legacy_video_type": "video/webm",
+      "legacy_video_muted": true,
+      "slug": {"es": "php-blog", "en": "php-blog", "ja": "php-blog"},
+      "description_legacy_html": {
+        "es": "PHP-BLOG es un framework de blogging full-stack hecho en PHP, HTML, CSS y JS Vanilla. Permite:<br><br>-Crear y personalizar un blog<br>-Asignar roles a usuarios<br>-Crear posts con imágenes y Markdown<br>-Comentar posts<br>-Personalizar perfiles de usuario<br>-Reportar contenido indebido<br>-Moderar el contenido a través del panel de moderación<br>",
+        "en": "PHP-BLOG is a full-stack, lightweight vanilla PHP blogging framework. It allows:<br><br>-The creation and customization of a blog<br>-Assigning user roles<br>-Creating posts with images and Markdown syntax<br>-Commenting on posts<br>-Customizing user profiles<br>-Reporting forbidden content<br>-Content moderation through the mod panel<br>",
+        "ja": "PHP-BLOGは、フルスタックで軽量なバニラPHPのブログフレームワークです。以下の機能を提供します：<br><br>・ブログの作成とカスタマイズ<br>・ユーザーロールの割り当て<br>・画像およびMarkdown構文を使用した投稿の作成<br>・投稿へのコメント<br>・ユーザープロフィールのカスタマイズ<br>・禁止コンテンツの報告<br>・モデレーションパネルを通じたコンテンツの管理<br>"
+      },
+      "description_blocks": {
+        "es": {
+          "lead": "PHP-BLOG es un framework de blogging full-stack hecho en PHP, HTML, CSS y JS Vanilla. Permite:",
+          "items": [
+            "Crear y personalizar un blog",
+            "Asignar roles a usuarios",
+            "Crear posts con imágenes y Markdown",
+            "Comentar posts",
+            "Personalizar perfiles de usuario",
+            "Reportar contenido indebido",
+            "Moderar el contenido a través del panel de moderación"
+          ]
+        },
+        "en": {
+          "lead": "PHP-BLOG is a full-stack, lightweight vanilla PHP blogging framework. It allows:",
+          "items": [
+            "The creation and customization of a blog",
+            "Assigning user roles",
+            "Creating posts with images and Markdown syntax",
+            "Commenting on posts",
+            "Customizing user profiles",
+            "Reporting forbidden content",
+            "Content moderation through the mod panel"
+          ]
+        },
+        "ja": {
+          "lead": "PHP-BLOGは、フルスタックで軽量なバニラPHPのブログフレームワークです。以下の機能を提供します：",
+          "items": [
+            "ブログの作成とカスタマイズ",
+            "ユーザーロールの割り当て",
+            "画像およびMarkdown構文を使用した投稿の作成",
+            "投稿へのコメント",
+            "ユーザープロフィールのカスタマイズ",
+            "禁止コンテンツの報告",
+            "モデレーションパネルを通じたコンテンツの管理"
+          ]
+        }
+      },
+      "note": "vids/blog.mp4 is HEVC video + Opus audio in an MP4 container — undecodable in Firefox and much of desktop Chrome, so this demo is broken for a large share of visitors today. It is also 185s long. Session 4 must transcode it out of HEVC and trim it to ~45s."
+    },
+    {
+      "key": "portfolio",
+      "sort_order": 6,
+      "is_published": true,
+      "title": "PORTAFOLIOS",
+      "repo_url": "https://github.com/SimonARG/portfolio",
+      "live_url": null,
+      "technologies": ["html", "css", "js"],
+      "legacy_thumbnail": "imgs/portfolio.avif",
+      "legacy_thumbnail_alt": "Portafolios",
+      "legacy_video": "vids/portfolio.mp4",
+      "legacy_video_type": "video/webm",
+      "legacy_video_muted": true,
+      "slug": {"es": "portafolios", "en": "portfolio", "ja": "portfolio"},
+      "description_legacy_html": {
+        "es": "Portafolios personal estilizado, animado y multi-lenguaje. Necesitaba un portafolios, entonces lo hice.<br><br>Hecho en vanilla HTML, CSS y JavaScript.",
+        "en": "Stylized, animated, and multi-lingual personal portfolio. I needed one, so I made it.<br><br> Built in vanilla HTML, CSS and JavaScript.",
+        "ja": "スタイリッシュでアニメーション豊かな、マルチリンガルな個人ポートフォリオ。必要だったので、自分で作りました<br><br>バニラのHTML、CSS、JavaScriptで構築しました。"
+      },
+      "description_blocks": {
+        "es": {
+          "lead": "Portafolios personal estilizado, animado y multi-lenguaje. Necesitaba un portafolios, entonces lo hice.",
+          "items": [],
+          "trailing": "Hecho en vanilla HTML, CSS y JavaScript."
+        },
+        "en": {
+          "lead": "Stylized, animated, and multi-lingual personal portfolio. I needed one, so I made it.",
+          "items": [],
+          "trailing": "Built in vanilla HTML, CSS and JavaScript."
+        },
+        "ja": {
+          "lead": "スタイリッシュでアニメーション豊かな、マルチリンガルな個人ポートフォリオ。必要だったので、自分で作りました",
+          "items": [],
+          "trailing": "バニラのHTML、CSS、JavaScriptで構築しました。"
+        }
+      },
+      "note": "MUST BE REWRITTEN IN SESSION 2 (plan §4.2 step 6). Every locale's second sentence claims the site is vanilla HTML/CSS/JS, which this rebuild makes false. The technologies list and the repo_url will also need revisiting once the site is Nuxt + Laravel across two repos. This is the one place the migration is deliberately NOT verbatim."
+    }
+  ],
+
+  "ui_strings": {
+    "note": "Chrome that is not entity data. These become i18n message keys in the client (session 5), not database rows.",
+    "projects_title": {
+      "used_on": "projects.html <h1>",
+      "es": "PROYECTOS",
+      "en": "PROYECTS",
+      "ja": "プロジェクト"
+    },
+    "projects_cta": {
+      "used_on": "index.html landing button",
+      "es": "PROYECTOS",
+      "en": "PROJECTS",
+      "ja": "プロジェクト"
+    },
+    "see_project": {
+      "used_on": "project card hover button",
+      "es": "VER PROYECTO",
+      "en": "SEE PROJECT",
+      "ja": "プロジェクトを見る"
+    },
+    "technologies_used": {
+      "used_on": "project popup <h2>",
+      "es": "TECNOLOGÍAS USADAS",
+      "en": "TECHNOLOGIES USED",
+      "ja": "使用された技術"
+    },
+    "description_heading": {
+      "used_on": "project popup <h3>",
+      "es": "DESCRIPCIÓN:",
+      "en": "DESCRIPTION:",
+      "ja": "説明："
+    },
+    "source_code": {
+      "used_on": "project popup repo link",
+      "es": "CÓDIGO",
+      "en": "CODE",
+      "ja": "コード"
+    },
+    "live_demo": {
+      "used_on": "project popup demo link (re-noise only)",
+      "es": "PROBAR",
+      "en": "TRY",
+      "ja": "試す"
+    },
+    "email_label": {
+      "used_on": "footer",
+      "es": "Email:",
+      "en": "Email:",
+      "ja": "電子メール：",
+      "legacy_style": {"ja": "font-size: 1rem;"}
+    },
+    "locale_pills": {
+      "used_on": "landing hero + mobile top row",
+      "es": "ES",
+      "en": "EN",
+      "ja": "JA"
+    },
+    "page_title_home": {
+      "used_on": "index.html <title>",
+      "es": "Simón Chasnovsky",
+      "en": null,
+      "ja": null
+    },
+    "page_title_projects": {
+      "used_on": "projects.html <title>",
+      "es": "Proyectos",
+      "en": null,
+      "ja": null
+    },
+    "meta_description": {
+      "used_on": "both pages",
+      "es": "Simon Chasnovsky - Porfolio",
+      "en": null,
+      "ja": null
+    },
+    "home_link": {
+      "used_on": "projects.html logo — an icon-only <a href=\"index.html\"> with NO accessible name",
+      "es": null,
+      "en": null,
+      "ja": null,
+      "note": "Needs a real accessible label in the rebuild; the legacy markup has none (a11y gap not enumerated in plan §1.5)."
+    }
+  },
+
+  "media": [
+    {"key": "thumb_mpi", "legacy_path": "imgs/mpi.avif", "kind": "image", "bytes": 7241, "used_by": "projects.mpi.thumbnail"},
+    {"key": "thumb_mixtorrents", "legacy_path": "imgs/mixtorrents.jpg", "kind": "image", "bytes": 247472, "used_by": "projects.mixtorrents.thumbnail", "note": "The only unoptimised thumbnail — a 247 KB JPEG beside five AVIFs averaging 27 KB. Re-encode to AVIF in session 4."},
+    {"key": "thumb_newtab", "legacy_path": "imgs/newtab.avif", "kind": "image", "bytes": 50680, "used_by": "projects.newtab.thumbnail"},
+    {"key": "thumb_ambient", "legacy_path": "imgs/re;noise.avif", "kind": "image", "bytes": 31930, "used_by": "projects.ambient.thumbnail", "rename_to": "imgs/re-noise.avif", "note": "Semicolon in the filename is a URL-encoding hazard."},
+    {"key": "thumb_blog", "legacy_path": "imgs/blog.avif", "kind": "image", "bytes": 39158, "used_by": "projects.blog.thumbnail"},
+    {"key": "thumb_portfolio", "legacy_path": "imgs/portfolio.avif", "kind": "image", "bytes": 8366, "used_by": "projects.portfolio.thumbnail"},
+    {"key": "favicon", "legacy_path": "imgs/favicon.png", "kind": "image", "bytes": 1016, "used_by": "both pages", "note": "16px PNG only. Session 4 generates a full favicon set."},
+    {"key": "video_mpi", "legacy_path": "vids/mpi.mp4", "kind": "video", "bytes": 2822180, "codec": "H.264", "resolution": "1920x974", "fps": 60, "duration_s": 53.1, "used_by": "projects.mpi.video"},
+    {"key": "video_mixtorrents", "legacy_path": "vids/mixtorrents.mp4", "kind": "video", "bytes": 2415713, "codec": "H.264", "resolution": "1364x692", "fps": 60, "duration_s": 46.2, "used_by": "projects.mixtorrents.video"},
+    {"key": "video_newtab", "legacy_path": "vids/newtab.mp4", "kind": "video", "bytes": 13648098, "codec": "H.264", "resolution": "1920x974", "fps": 60, "duration_s": 38.9, "used_by": "projects.newtab.video"},
+    {"key": "video_ambient", "legacy_path": "vids/ambiance.mp4", "kind": "video", "bytes": 9715449, "codec": "H.264", "audio": "AAC", "resolution": "1364x678", "fps": 60, "duration_s": 44.5, "used_by": "projects.ambient.video", "note": "KEEPS ITS AUDIO — the sound is the demo."},
+    {"key": "video_blog", "legacy_path": "vids/blog.mp4", "kind": "video", "bytes": 22777647, "codec": "HEVC", "audio": "Opus", "resolution": "1920x974", "fps": 60, "duration_s": 185.5, "used_by": "projects.blog.video", "note": "BROKEN in Firefox and much of desktop Chrome. Transcode out of HEVC and trim to ~45s in session 4."},
+    {"key": "video_portfolio", "legacy_path": "vids/portfolio.mp4", "kind": "video", "bytes": 6078580, "codec": "H.264", "resolution": "1920x974", "fps": 60, "duration_s": 26.7, "used_by": "projects.portfolio.video"},
+    {"key": "cv_es", "legacy_path": "docs/CV-ES.pdf", "kind": "document", "bytes": 153184, "used_by": "documents.cv_es"},
+    {"key": "cv_en", "legacy_path": "docs/CV-EN.pdf", "kind": "document", "bytes": 152437, "used_by": "documents.cv_en"}
+  ],
+  "media_note": "Byte counts measured 2026-08-06 from the working tree populated via `git archive origin/production imgs vids docs | tar -x`. Video total is 57,457,667 bytes (54.8 MiB) across six files — the baseline the session-4 budget of <8 MB is measured against. Media lives ONLY on the legacy production/gh-pages branches; it is gitignored on main."
+}
