@@ -19,6 +19,19 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Application Version
+    |--------------------------------------------------------------------------
+    |
+    | Reported by GET /api/v1/health. The deploy script sets APP_VERSION to the
+    | commit it shipped, so a health probe identifies exactly which build is
+    | answering from a given slot.
+    |
+    */
+
+    'version' => env('APP_VERSION', '0.1.0-dev'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Application Environment
     |--------------------------------------------------------------------------
     |
