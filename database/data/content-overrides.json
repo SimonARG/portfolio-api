@@ -95,6 +95,13 @@
       "to": "PROJECTS",
       "plan_defect": 1,
       "note": "ui_strings are not database rows — they become i18n message keys in the client (content-inventory.json ui_strings.note). This correction therefore has to be applied by session 5 when the message catalogue is written, not by a seeder. Listed here so the decision is not lost between sessions."
+    },
+    {
+      "where": "ui_strings.meta_description.es",
+      "from": "Porfolio",
+      "to": "Portfolio",
+      "plan_defect": 3,
+      "note": "The same typo as profile.meta_description.es, which IS corrected in the database. This is the client-side copy of the string; session 5 must fix it in the message catalogue too, or the two will disagree about the site's own description."
     }
   ],
 
