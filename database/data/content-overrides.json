@@ -1,0 +1,190 @@
+{
+  "$schema_version": 1,
+  "meta": {
+    "purpose": "Every deliberate departure from the legacy copy, in one auditable place. content-inventory.json is the verbatim harvest of what the old site said and is never edited; this file is what the rebuild says instead, and why.",
+    "decided_on": "2026-08-07",
+    "decided_by": "Simón, during session 2",
+    "how_it_is_applied": "ContentInventory reads the inventory, then applies this file on top. Nothing here is applied silently — ContentOverridesTest asserts that every `from` string is actually present in the inventory, so a correction whose target text changes upstream fails the build instead of quietly doing nothing.",
+    "plan_ref": "REBUILD_PLAN.md §4.2 steps 5 and 6"
+  },
+
+  "decisions": [
+    {
+      "question": "The ten source typos catalogued in content-inventory.json meta.source_defects — fix or keep?",
+      "choice": "Fix all ten.",
+      "rationale": "All are unambiguous errors and none change Simón's meaning. Two of them (PROYECTS, Porfolio) were already listed as defects 1 and 3 in plan §1.5.",
+      "consequence": "The plan's §4.2 acceptance criterion — 'byte-identical to the legacy copy except the deliberate portfolio rewrite' — now reads 'except the departures enumerated in this file'."
+    },
+    {
+      "question": "menu_items.linkedin's Japanese label uses HALFWIDTH katakana (ﾘﾝｹﾄﾞｲﾝ) where every other Japanese string on the site is fullwidth, including social_links.linkedin (リンクトイン).",
+      "choice": "KEEP the halfwidth form, verbatim.",
+      "rationale": "Simón's explicit call. Recorded here so a later session does not read it as an unnoticed bug and 'fix' it — the inconsistency between the menu label and the socials label is intentional and must survive.",
+      "do_not_change": true
+    },
+    {
+      "question": "social_links.rym and both documents carry a single untranslated <span> in the legacy markup — no en/ja variants exist at all.",
+      "choice": "Fill every locale properly.",
+      "rationale": "RYM takes the full brand name in es/en and a katakana transliteration in ja, matching how Last.FM is already handled (Last.FM / ラスト.エフエム). CV labels name the document's language in the reader's language, so a Japanese visitor sees スペイン語 / 英語 rather than the Spanish endonyms."
+    },
+    {
+      "question": "The portfolio project's own entry claims the site is vanilla HTML/CSS/JS, which this rebuild makes false. Its repo_url points at the legacy repo and the schema has one repo_url field.",
+      "choice": "repo_url → portfolio-client, live_url → the live site, technologies → the real new stack. The API repo is named in the description body.",
+      "rationale": "The client repo is the one a visitor clicking through from a portfolio card wants to see first. live_url was never set even though the site has always been live."
+    },
+    {
+      "question": "Japanese inline font-size overrides in the legacy markup.",
+      "choice": "Not seeded at all — they stay in the inventory's legacy_style fields and never enter the database.",
+      "rationale": "They are presentation, not content. Plan §4.2 'Watch for'. Session 5 solves CJK sizing in CSS; §6 lists which strings carried them."
+    }
+  ],
+
+  "corrections": [
+    {
+      "where": "profile.meta_description.es",
+      "from": "Porfolio",
+      "to": "Portfolio",
+      "plan_defect": 3
+    },
+    {
+      "where": "profile.about.es",
+      "from": "móbiles",
+      "to": "móviles"
+    },
+    {
+      "where": "profile.about.en",
+      "from": "adquire",
+      "to": "acquire"
+    },
+    {
+      "where": "profile.about.en",
+      "from": "Adobe's Creative Suit (",
+      "to": "Adobe's Creative Suite ("
+    },
+    {
+      "where": "profile.about.en",
+      "from": "the desktop suite's by Google",
+      "to": "the desktop suites by Google"
+    },
+    {
+      "where": "profile.about.en",
+      "from": "maitaining",
+      "to": "maintaining"
+    },
+    {
+      "where": "projects.ambient.description_blocks.es",
+      "from": "laconfiguración",
+      "to": "la configuración"
+    },
+    {
+      "where": "projects.newtab.description_blocks.en",
+      "from": "Addding",
+      "to": "Adding"
+    },
+    {
+      "where": "projects.newtab.description_blocks.en",
+      "from": "shorcuts",
+      "to": "shortcuts"
+    }
+  ],
+  "corrections_note": "`where` is a dotted path into content-inventory.json. A list of objects is indexed by its `key` field, so `projects.ambient` selects the entry whose key is 'ambient'. The replacement applies to every string beneath the resolved node, which is what lets one entry fix a paragraph list (profile.about.es) or a {lead, items, trailing} block in one go. Only description_blocks is corrected, never description_legacy_html — that field is the reference copy of what the old markup said and is not seeded.",
+
+  "client_side_corrections": [
+    {
+      "where": "ui_strings.projects_title.en",
+      "from": "PROYECTS",
+      "to": "PROJECTS",
+      "plan_defect": 1,
+      "note": "ui_strings are not database rows — they become i18n message keys in the client (content-inventory.json ui_strings.note). This correction therefore has to be applied by session 5 when the message catalogue is written, not by a seeder. Listed here so the decision is not lost between sessions."
+    }
+  ],
+
+  "icons": {
+    "reason": "The harvest records Font Awesome classes (`fa-brands fa-github`). Session 5 deletes Font Awesome entirely — it costs ~100 KB plus webfonts and a blocking CDN origin for about a dozen glyphs (plan §1.5 defects 17 and 18) — and replaces it with @nuxt/icon, server-bundled so the SVGs inline and no CDN is touched. The icon name is content, so the mapping lands in the database now rather than as a lookup table in the client.",
+    "sets": "Brands come from @iconify-json/simple-icons and UI glyphs from @iconify-json/tabler, matching plan §4.5 step 3.",
+    "unverified": "These names have NOT been checked against the installed icon packages — neither package is installed until session 5. Session 5 must verify every one of them renders and correct any that do not. `rym` deliberately uses a tabler headphones glyph rather than a brand icon, mirroring the legacy markup, which also used a generic headphones glyph rather than a RateYourMusic logo.",
+    "menu_items": {
+      "about": "tabler:id",
+      "github": "simple-icons:github",
+      "cv": "tabler:file-text",
+      "socials": "tabler:address-book",
+      "linkedin": "simple-icons:linkedin"
+    },
+    "social_links": {
+      "instagram": "simple-icons:instagram",
+      "linkedin": "simple-icons:linkedin",
+      "facebook": "simple-icons:facebook",
+      "last_fm": "simple-icons:lastdotfm",
+      "rym": "tabler:headphones",
+      "letterboxd": "simple-icons:letterboxd"
+    }
+  },
+
+  "additional_technologies": [
+    {"slug": "nuxt", "name": "Nuxt", "sort_order": 10},
+    {"slug": "typescript", "name": "TypeScript", "sort_order": 11},
+    {"slug": "postgresql", "name": "PostgreSQL", "sort_order": 12}
+  ],
+
+  "projects": {
+    "portfolio": {
+      "reason": "Plan §4.2 step 6. Every locale's closing sentence claimed the site was built in vanilla HTML, CSS and JavaScript. This is the one place the migration is deliberately not verbatim.",
+      "repo_url": "https://github.com/SimonARG/portfolio-client",
+      "live_url": "https://www.simon-dev.com/",
+      "technologies": ["nuxt", "vuejs", "typescript", "tailwindcss", "laravel", "php", "postgresql"],
+      "description_blocks": {
+        "es": {
+          "lead": "Portafolios personal estilizado, animado y multi-lenguaje. Necesitaba un portafolios, entonces lo hice.",
+          "items": [
+            "Front-end en Nuxt 4, renderizado en el servidor y cacheado con ISR",
+            "API REST en Laravel 13 sobre PostgreSQL, con todo el contenido traducido en la base de datos",
+            "Tres idiomas —español, inglés y japonés— cada uno con su propia URL",
+            "Panel de administración para editar cada texto, imagen y proyecto sin tocar código"
+          ],
+          "trailing": "Hecho en dos repositorios: el cliente en Nuxt y la API en Laravel. Sin librería de componentes, los diálogos y menús son elementos nativos del navegador."
+        },
+        "en": {
+          "lead": "Stylized, animated, and multi-lingual personal portfolio. I needed one, so I made it.",
+          "items": [
+            "Nuxt 4 front end, server-rendered and cached with ISR",
+            "Laravel 13 REST API on PostgreSQL, with every piece of content translated in the database",
+            "Three languages —Spanish, English and Japanese— each on its own URL",
+            "An admin panel for editing every string, image and project without touching code"
+          ],
+          "trailing": "Built as two repositories: the Nuxt client and the Laravel API. No component library — the dialogs and menus are native browser elements."
+        },
+        "ja": {
+          "lead": "スタイリッシュでアニメーション豊かな、マルチリンガルな個人ポートフォリオ。必要だったので、自分で作りました",
+          "items": [
+            "Nuxt 4のフロントエンド。サーバーサイドレンダリングとISRによるキャッシュ",
+            "PostgreSQL上のLaravel 13のREST API。すべてのコンテンツをデータベースで多言語管理",
+            "スペイン語・英語・日本語の3言語、それぞれに専用のURL",
+            "コードを触らずにテキスト・画像・プロジェクトを編集できる管理パネル"
+          ],
+          "trailing": "NuxtのクライアントとLaravelのAPI、2つのリポジトリで構築。コンポーネントライブラリは使わず、ダイアログやメニューはブラウザのネイティブ要素で実装しています。"
+        }
+      }
+    }
+  },
+
+  "social_links": {
+    "rym": {
+      "reason": "Legacy markup had a single untranslated <span>RYM</span>. Filled per the decision above, matching how Last.FM is handled.",
+      "label": {
+        "es": "Rate Your Music",
+        "en": "Rate Your Music",
+        "ja": "レートユアミュージック"
+      }
+    }
+  },
+
+  "documents": {
+    "cv_es": {
+      "reason": "Legacy markup had a single untranslated <span>Español</span>. The label names the CV's language, so it is now given in the reader's language.",
+      "label": {"es": "Español", "en": "Spanish", "ja": "スペイン語"}
+    },
+    "cv_en": {
+      "reason": "Legacy markup had a single untranslated <span>English</span>.",
+      "label": {"es": "Inglés", "en": "English", "ja": "英語"}
+    }
+  }
+}
