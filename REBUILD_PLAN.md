@@ -1,7 +1,7 @@
 # Portfolio Rebuild Plan — `simon-dev.com` v2
 
-**Status:** session 1 complete, session 2 next
-**Written:** 2026-08-06 · **Last updated:** 2026-08-06 (session 1)
+**Status:** sessions 1–2 complete, session 3 next
+**Written:** 2026-08-06 · **Last updated:** 2026-08-07 (session 2)
 **Shape:** 10 sessions, each self-contained and under 1M tokens, each ending with the starter prompt for the next.
 
 ---
@@ -705,7 +705,7 @@ Each session appends here before writing its handoff prompt. Keep it factual —
 | # | Session | Status | Notes |
 |---|---|---|---|
 | 1 | Foundations | ✅ **done** 2026-08-06 | Both repos live and green. Details below. |
-| 2 | Data model | ⬜ not started | |
+| 2 | Data model | ✅ **done** 2026-08-07 | Full §2.4 schema seeded in three languages, idempotently. Details below. |
 | 3 | API | ⬜ not started | |
 | 4 | Media pipeline | ⬜ not started | |
 | 5 | Design system | ⬜ not started | |
@@ -753,7 +753,65 @@ Three things the harvest records rather than fixes, all for session 2 to decide:
 | Legacy video, six files | 57,457,667 B (54.8 MiB) | < 8 MB (session 4) |
 | Client JS, all chunks gzipped | ~130 KB | < 90 KB on `/` (session 8) |
 
+### Session 2 — what shipped
+
+**Schema.** Eleven content tables (§2.4) plus the Spatie Permission tables, all migrated and green. Three invariants are enforced by the database rather than by convention, because each is a correctness property the API would otherwise defend by hand: exactly one default locale, exactly one profile row, and one project per slug per locale. A `CHECK` constraint restricts `menu_items.kind` to `popup|external`.
+
+**Index design — the GIN assumption in §4.2 is wrong, and this is worth knowing.** The plan asks for "GIN indexes where they'll be queried". For the hot path — `GET /api/v1/projects/{slug}` — GIN is the wrong index and Postgres will not use it. Spatie's `whereJsonContainsLocale` scope compiles to
+
+```sql
+where "slug"->>'es' = ?
+```
+
+a **text extraction**, not a containment operator, and GIN only serves `@>` / `?` / `@@`. What actually serves it is a **partial unique B-tree index on the extracted expression**, one per locale — which also enforces per-locale slug uniqueness for free. GIN is applied only where a query genuinely uses it: the key-existence tests (`description_md ? 'ja'`) behind session 9's missing-translation view. Both paths were confirmed against the planner (`Index Scan using projects_slug_es_unique`, `Bitmap Index Scan on projects_description_md_gin`).
+
+**Models.** Spatie translations via `app/Concerns/HasTranslations.php`, mirroring harmless-pleasure's house trait: serialising resolves to the active locale rather than emitting the raw JSONB, so a model reaching a response by some path other than session 3's Resources cannot leak all three languages and reintroduce defect 12. `published()` treats `is_published` as the gate and `published_at` as an optional embargo; the migrated content carries a **null `published_at`**, because the legacy site recorded no dates and inventing them would be fabrication.
+
+**Hero lines are deliberately not translatable.** All three render simultaneously, each in its own language and each paired with a *different* tech list. Modelling them as translations of one row would collapse the hero.
+
+**Markdown.** `app/Support/MarkdownRenderer.php` — CommonMark with `html_input: strip` and `allow_unsafe_links: false`, then an allowlist sanitiser (`symfony/html-sanitizer`, added this session). `img` and `h1` are excluded on purpose: images belong to the `media` table with recorded dimensions, and the page owns its single `h1`. Rendering happens on save through an observer, so the invariant holds however the row was written.
+
+**`content_version`.** The §2.3 lever, bumped by an observer registered centrally in `AppServiceProvider::CONTENT_MODELS`. It observes `created`/`updated`/`deleted`, **not `saved`** — Eloquent fires `saved` even when `save()` short-circuits on a clean model, and its change set is stale there, so a no-op save was indistinguishable from a real write. Pivot writes fire no model event at all, so `Project::syncTechnologies()` bumps explicitly, comparing the ordered id list before and after rather than trusting `sync()`'s return value (Postgres counts a row as affected even when written back its own values).
+
+**Content.** `php artisan migrate:fresh --seed` produces 3 locales, 1 profile, 3 hero lines, 5 menu items, 6 social links, 2 documents, **12 technologies** and 6 projects, every translatable field covering all three locales.
+
+**Idempotency is stronger than the plan required.** `migrate:fresh --seed` twice gives byte-identical state, *and* re-running `db:seed` over an already-seeded database is a complete no-op — no writes, no `updated_at` drift, and `content_version` does not even advance. That falls out of every seeder keying on a natural key plus the observer firing only on real writes.
+
+**Deliberate content departures, all in `database/data/content-overrides.json`.** `content-inventory.json` stays the untouched verbatim harvest; the overrides file is the reviewable record of what the rebuild says instead, with Simón's decisions and their rationale. `ContentOverridesTest` asserts every correction's target still exists in the harvest, so a correction cannot silently become a no-op.
+
+| Decision | Choice |
+|---|---|
+| The ten source typos | **Fix all ten.** Nine are database content; `PROYECTS` is a `ui_strings` value and is tracked under `client_side_corrections` for session 5. |
+| Halfwidth katakana `ﾘﾝｹﾄﾞｲﾝ` in the LinkedIn menu label | **Keep, verbatim.** Simón's explicit call, flagged `do_not_change` and pinned by a test. The menu label stays halfwidth while the socials label stays fullwidth — that inconsistency is intentional. |
+| `social_links.rym` and both documents, untranslated in the legacy markup | **Fill every locale.** RYM becomes *Rate Your Music* / レートユアミュージック; the CVs name their language in the reader's language (Español/Spanish/スペイン語, Inglés/English/英語). |
+| The `portfolio` project's own entry | Rewritten in all three languages for the real stack. `repo_url` → `portfolio-client`, `live_url` → `https://www.simon-dev.com/` (never previously set), technologies → Nuxt, VueJS, TypeScript, TailwindCSS, Laravel, PHP, PostgreSQL. The API repo is named in the description body, and the description notes there is no component library. |
+| Japanese inline font-size overrides | **Never seeded.** They stay in the harvest's `legacy_style` fields. A test asserts no `font-size`, `font-weight` or `legacy_style` string reaches the database. |
+
+This revises §4.2's acceptance criterion: the seeded content is no longer "byte-identical to the legacy copy except the portfolio rewrite" but "except the departures enumerated in `content-overrides.json`".
+
+**Font Awesome → Iconify mapping** also lives in that file (`icons`), since the icon name is content and session 5 deletes Font Awesome. ⚠️ **These names are unverified** — neither icon package is installed until session 5, which must confirm each one renders.
+
+**Admin user.** `AdminUserSeeder` requires both `ADMIN_EMAIL` and `ADMIN_PASSWORD`, with no default and **no generated fallback**: a default is guessable from the repository, and a generated one has to be printed or logged to be usable, which puts a live credential in a log file or a CI transcript. Missing credentials are fatal in production and a quiet skip elsewhere.
+
+**Locale defaults.** `config/app.php` now defaults `locale` and `fallback_locale` to `es`. Spatie resolves a missing translation through `config('app.fallback_locale')`, so an environment without the variable set would have made English the fallback for every JSONB column.
+
+**Gates:**
+
+| | Before | After |
+|---|---|---|
+| Pest | 19 tests, 769 assertions | **114 tests, 1079 assertions** |
+| Larastan level 6 | clean | clean |
+| Pint | clean | clean |
+
+Three library behaviours are pinned by tests because they are easy to assume wrongly and sessions 3 and 9 build on them:
+
+- `getTranslationWithoutFallback()` returns **`''`, not `null`**, for an absent translation. Session 3's Resources must treat that as missing or the client renders a blank where the fallback belonged.
+- Assigning a translation map **merges**; it does not replace.
+- Only `replaceTranslations()` actually removes a locale. **This was a real bug**, caught by its own test: the Markdown observer used `setAttribute`, so deleting a project's Japanese copy left the previously rendered Japanese HTML live.
+
 ### Decisions revised mid-build
+
+**2026-08-07 — GIN is not the right index for translated slug lookup.** See the session-2 index note above. §4.2's phrasing stands, but the obvious reading of it produces an index Postgres will never use.
 
 **2026-08-06 — PrimeVue dropped entirely.** The plan specified PrimeVue 4 (§2.1, §2.2). Version checks found PrimeVue **5.0.0** is current and has moved to a **commercial licence** — it requires a key, verifies offline, and prints a console notice without one. PrimeVue **4.5.5 is still MIT and still shipping**, so pinning v4 was a real option. Simón chose the third path: drop the dependency.
 
@@ -775,68 +833,77 @@ Rationale: the public surface was only Dialog, Select and Toast. Native `<dialog
 
 - **`gd` has no WebP support.** `libwebp-dev` could not be installed without sudo. Not on any critical path: session 4 generates WebP and AVIF with ffmpeg, and `@nuxt/image` uses sharp.
 
+- **The `media` table is empty → session 4.** The schema, model, factory and every foreign key exist, but no rows are seeded: the files themselves live only on the legacy `production`/`gh-pages` branches and have not been encoded yet. Every project's `thumbnail_media_id`, `video_media_id` and `poster_media_id` is null, as is both documents' `media_id`. Session 4 populates it and links the rows.
+
+- **Icon names are unverified → session 5.** The Iconify mapping in `content-overrides.json` was written without either icon package installed. Session 5 must confirm each name resolves.
+
+- **`ui_strings` corrections → session 5.** Two typo fixes (`PROYECTS`, and the `ui_strings` copy of `Porfolio`) belong to the client's i18n message catalogue, not to a database row. They are recorded under `client_side_corrections`.
+
 ---
 
-## 7. Starter prompt — Session 2
+## 7. Starter prompt — Session 3
 
 Paste this into a fresh session to begin.
 
 ```
-Session 2 of 10 — Data model and content migration — of the simon-dev.com rebuild.
+Session 3 of 10 — The API — of the simon-dev.com rebuild.
 
 Read /home/simon/portfolio-api/REBUILD_PLAN.md in full before doing anything. It is
-the single source of truth. Your scope is §4.2 exactly; §0 has the standing rules and
-the budget guard; §2.4 has the schema and §2.6 the conventions; §6 records what
-session 1 actually shipped and what it deliberately left for you.
+the single source of truth. Your scope is §4.3 exactly; §0 has the standing rules and
+the budget guard; §2.5 has the endpoint list, §2.6 the conventions, and §6 records what
+sessions 1 and 2 actually shipped, including several facts that will cost you time if
+you rediscover them the hard way.
 
-Work in ~/portfolio-api. Session 1 left it green: Laravel 13.24 on PHP 8.4 with
-PostgreSQL, Redis, Sanctum, Spatie Translatable 6.14 and Spatie Permission 8.3;
-Pest 5 (19 tests, 769 assertions), Larastan level 6 and Pint all clean. Verify with
-`php artisan test`, `vendor/bin/phpstan analyse` and `vendor/bin/pint --test` before
-you change anything.
+Work in ~/portfolio-api. Session 2 left it green: Laravel 13 on PHP 8.4 with the full
+§2.4 schema migrated and seeded in three languages. Pest is at 114 tests / 1079
+assertions, Larastan level 6 and Pint clean. Verify with `php artisan test`,
+`vendor/bin/phpstan analyse --memory-limit=1G` and `vendor/bin/pint --test` before you
+change anything. Note the memory flag — PHPStan OOMs at its default 128M on this
+codebase, and both the composer script and CI already pass it.
 
-Build the data layer: migrations for the full §2.4 schema with JSONB translatable
-columns and GIN indexes, Eloquent models with HasTranslations, factories, and the
-seeders that read database/data/content-inventory.json. Convert the <br>-list project
-descriptions to Markdown and render sanitised HTML on save via a model observer.
-Add content_version to settings with the observer that bumps it. Cover it all with
-Pest: translation fallback, ordering, publish scopes, Markdown rendering and
-sanitisation, and seeder idempotency.
+Build the API: routes under /api/v1 in public and admin groups, API Resources for every
+entity with locale resolution from ?locale=, the public controllers (Health, Bootstrap,
+Project index and show-by-translated-slug, Technology), Sanctum PAT auth with
+admin:read / admin:write abilities and no sessions or CSRF anywhere, the admin CRUD
+controllers, Form Requests validating translation shape, Redis response caching keyed on
+(route, locale, content_version) with ETag and 304, rate limiting, CORS, an OpenAPI 3.1
+spec at docs/openapi.yaml, and Pest feature tests covering every endpoint.
 
-The inventory is complete and verbatim — treat it as the authority, not the legacy
-HTML. Each project carries both `description_legacy_html` (the source fragment) and
-`description_blocks` ({lead, items, sometimes trailing}), so the Markdown conversion
-is mechanical rather than interpretive. `meta.source_defects` catalogues everything
-deliberately left wrong.
+Six things session 2 established that change how you write this:
 
-Five judgement calls are yours to make and to surface, not to decide silently:
+1. `getTranslationWithoutFallback()` returns an EMPTY STRING, not null, for an absent
+   translation. Your Resources must treat '' as missing, or the client renders a blank
+   where the `requested → es` fallback should have gone. There is a test pinning this.
+2. Assigning a translation map MERGES it into the existing translations. Only
+   `replaceTranslations()` actually removes a locale. The admin update path needs the
+   latter, or deleting a translation will appear to do nothing.
+3. `content_version` already exists and is already bumped on every content write by an
+   observer over `AppServiceProvider::CONTENT_MODELS`. Use `Setting::contentVersion()`
+   in your cache keys and `Setting::bumpContentVersion()` in the publish action — do not
+   build a second invalidation path. Pivot writes fire no model event, which is why
+   `Project::syncTechnologies()` exists and why admin technology updates must go through
+   it rather than through `technologies()->sync()`.
+4. Slug lookup goes through the `whereSlug($slug, $locale)` scope, which the partial
+   unique B-tree index serves directly. `whereSlugInAny($slug, $locales)` also exists so
+   a visitor arriving at the English URL for a Spanish slug can be 301'd to the canonical
+   per-locale URL rather than 404'd — the legacy site had one URL per page, so inbound
+   links will not know the new shape. Decide that policy and implement it.
+5. `Model::preventLazyLoading()` is on outside production. A list endpoint that N+1s
+   through technologies or media will throw in tests rather than quietly issue a query
+   per row — eager-load deliberately.
+6. The `media` table is EMPTY and every project's thumbnail/video/poster id is null, as
+   is both documents' media_id. That is session 4's work, not a bug. Design the Resources
+   so a null media reference serialises cleanly now and needs no reshaping later.
 
-1. The `portfolio` project's description claims the site is vanilla HTML, CSS and
-   JavaScript, which this rebuild makes false. Rewrite it in all three languages —
-   and note the stack is now Nuxt 4 + Laravel 13 across two repos, and that PrimeVue
-   was dropped. Its technologies list and repo_url need revisiting too.
-2. The source typos in meta.source_defects. Ask Simón which to fix; do not silently
-   correct his copy, and do not silently keep it either.
-3. `menu_items.linkedin`'s Japanese label uses halfwidth katakana (ﾘﾝｹﾄﾞｲﾝ) where
-   every other string is fullwidth. Almost certainly a mistake.
-4. `social_links.rym` and both `documents` have no en/ja labels in the legacy markup —
-   a single untranslated span each. Decide whether to fill them or keep them as-is.
-5. Japanese inline font-size overrides are already isolated in `legacy_style` fields.
-   They are presentation and must not be seeded as content; §6 lists which strings
-   carried them, for session 5.
-
-Every DB mutation goes through a committed migration or seeder — no ad-hoc SQL.
-Atomic commits. `php artisan migrate:fresh --seed` must be idempotent: running it
-twice changes nothing.
-
-Both repos use SSH remotes, not HTTPS — the gh OAuth token lacks the `workflow` scope,
-so workflow files cannot be pushed over HTTPS (§3). Keep it that way unless Simón says
-otherwise. CI is green on both; keep it that way too.
+Every DB mutation goes through a committed migration or seeder — no ad-hoc SQL. Atomic
+commits. Both repos use SSH remotes, not HTTPS: the gh OAuth token lacks the `workflow`
+scope, so workflow files cannot be pushed over HTTPS (§3). Keep it that way unless Simón
+says otherwise. CI is green on both; keep it that way too.
 
 Do not touch the client repo, and do not modify anything under /home/simon/portfolio
 beyond reading it — that repo is still serving the live site.
 
-When you finish: update the progress ledger in §6, sync REBUILD_PLAN.md across all
-three repos, then print the starter prompt for Session 3 (The API), adjusted for
+When you finish: update the progress ledger in §6, sync REBUILD_PLAN.md across all three
+repos, then print the starter prompt for Session 4 (Media pipeline), adjusted for
 anything that actually changed.
 ```
