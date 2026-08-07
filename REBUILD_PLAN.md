@@ -387,7 +387,7 @@ Environment facts worth knowing before they cost someone an hour:
 
 - **No passwordless sudo.** `apt install` is unavailable, so anything needing system packages has to be worked around. This is why the PHP extensions were compiled from the phpbrew source tree into `~/.phpbrew` rather than installed from a repo, and why `gd` was built without `--with-webp`: `libwebp-dev` could not be installed. That is fine — WebP and AVIF generation is ffmpeg's job in session 4, and `@nuxt/image` uses sharp, not gd.
 - **Postgres `simon` has `CREATEDB` but not `CREATEROLE`.** The plan's "dedicated local user" was therefore not possible; the local `portfolio` and `portfolio_test` databases are owned by `simon` over the unix socket, matching how the harmless-pleasure databases already work on this box. The dedicated `portfolio_user` is created properly on the VPS in session 10, where there is root.
-- **The `gh` OAuth token lacks the `workflow` scope** (`gist, read:org, repo` only), so pushes containing `.github/workflows/*.yml` are rejected. Fix once with `gh auth refresh -s workflow`.
+- **The `gh` OAuth token lacks the `workflow` scope** (`gist, read:org, repo` only), so pushing `.github/workflows/*.yml` over **HTTPS** is rejected. The two new repos therefore use **SSH remotes** (`git@github.com:SimonARG/…`), which is not subject to that OAuth App restriction and works with the existing `~/.ssh/id_ed25519`. If you would rather keep the house HTTPS convention, run `gh auth refresh -s workflow` once and then `git remote set-url origin https://github.com/SimonARG/<repo>.git`. Note the legacy `~/portfolio` repo is untouched and still on HTTPS.
 - **Rebuilding the PHP extensions**, if this ever needs redoing: `phpize && ./configure --with-php-config=~/.phpbrew/php/php-8.4.13/bin/php-config` inside `~/.phpbrew/build/php-8.4.13/ext/{intl,gd}`, then `pecl install redis`, with an `extension=NAME.so` line in `~/.phpbrew/php/php-8.4.13/var/db/cli/NAME.ini`.
 
 ---
@@ -734,6 +734,8 @@ Each session appends here before writing its handoff prompt. Keep it factual —
 
 **Round trip proven end to end.** Playwright asserts against the raw HTML, not the hydrated DOM: if the payload only appeared after hydration, SSR would not really be working and a DOM assertion would not catch it.
 
+**CI is green** on `main` and `production` in both repos (verified 2026-08-06). Both use **SSH remotes** — see §3 for why.
+
 **Content inventory** — `portfolio-api/database/data/content-inventory.json`, the verbatim ES/EN/JA harvest: profile and About copy, 3 hero lines, 5 menu items, 6 social links, 2 CVs, 9 technologies, 6 projects, 13 UI strings, 15 media assets. `ContentInventoryTest` turns the plan's acceptance criterion into 16 executable assertions, so a later edit cannot quietly drop a locale or a project.
 
 Three things the harvest records rather than fixes, all for session 2 to decide:
@@ -766,15 +768,6 @@ Rationale: the public surface was only Dialog, Select and Toast. Native `<dialog
 **2026-08-06 — local Postgres user.** §4.1 called for a dedicated local user; `simon` has `CREATEDB` but not `CREATEROLE`, and there is no passwordless sudo. Local `portfolio` and `portfolio_test` are owned by `simon` over the unix socket, matching the existing harmless-pleasure databases on this box. The dedicated `portfolio_user` is still created properly on the VPS in session 10.
 
 ### Deferred work
-
-- **Pushing the two `.github/workflows/ci.yml` files → blocked on Simón.** Everything else is committed on `main` and `production` in both repos. The `gh` OAuth token carries `gist, read:org, repo` but not `workflow`, so GitHub rejects any push containing a workflow file. One-time fix:
-
-  ```bash
-  gh auth refresh -s workflow          # then, in each repo:
-  git push -u origin main && git push -u origin production
-  ```
-
-  Until that runs, **CI has never executed**, so "CI is green on both repos" is unverified rather than failing. The workflows are written and committed locally.
 
 - **Playwright in the client's CI → session 8.** The E2E suite needs PHP, PostgreSQL and Redis running alongside to serve the API. It runs locally today; session 8 wires it into CI with Lighthouse CI and axe-core.
 
@@ -836,10 +829,9 @@ Every DB mutation goes through a committed migration or seeder — no ad-hoc SQL
 Atomic commits. `php artisan migrate:fresh --seed` must be idempotent: running it
 twice changes nothing.
 
-Note that `.github/workflows/ci.yml` is committed locally but has never been pushed —
-the gh token lacks the `workflow` scope (§6, Deferred work). If Simón has since run
-`gh auth refresh -s workflow`, push it and confirm CI actually goes green; if not,
-carry the deferral forward.
+Both repos use SSH remotes, not HTTPS — the gh OAuth token lacks the `workflow` scope,
+so workflow files cannot be pushed over HTTPS (§3). Keep it that way unless Simón says
+otherwise. CI is green on both; keep it that way too.
 
 Do not touch the client repo, and do not modify anything under /home/simon/portfolio
 beyond reading it — that repo is still serving the live site.
