@@ -1,7 +1,7 @@
 # Portfolio Rebuild Plan — `simon-dev.com` v2
 
-**Status:** planning complete, session 1 not started
-**Written:** 2026-08-06
+**Status:** session 1 complete, session 2 next
+**Written:** 2026-08-06 · **Last updated:** 2026-08-06 (session 1)
 **Shape:** 10 sessions, each self-contained and under 1M tokens, each ending with the starter prompt for the next.
 
 ---
@@ -205,7 +205,9 @@ Carry this list into the rebuild; each item should end up genuinely resolved, no
 
 | Decision | Choice | Reasoning |
 |---|---|---|
-| Client framework | **Nuxt 4.5** | PrimeVue and Pinia are Vue-only, so Astro would mean Vue islands with awkward cross-island state and PrimeVue theming. Nuxt 3 hit EOL 2026-07-31; 4.5 is current (4.5.1, July 2026). |
+| Client framework | **Nuxt 4.5** | Pinia is Vue-only, so Astro would mean Vue islands with awkward cross-island state. Nuxt 3 hit EOL 2026-07-31; 4.5.2 is current (verified 2026-08-06). |
+| Component library | **None** — hand-built primitives | Revised in session 1. PrimeVue 5 moved to a commercial licence in 2026; PrimeVue 4 is the last MIT line. The public surface needed only Dialog, Select and Toast, which native elements plus a small composable cover with less code, no bundle cost and no licence. See §6. |
+| TypeScript | **6.x, pinned** | TypeScript 7's native compiler cannot be consumed by Volar yet, so `vue-tsc` fails against it and every project with `.vue` files is on 6 until the 7.1 API ships. Nuxt 4.5 pins the same. Revisit when Volar rebuilds on 7.1. |
 | Rendering | **SSR + ISR**, Nitro as a node service behind nginx | Confirmed with Simón. Static-equivalent TTFB after first hit via Redis-backed ISR, but content edits go live without a rebuild — which is what makes the API-client model real at runtime rather than at build time. |
 | Backend | **Laravel 13** on PHP 8.4 | Current stable (min PHP 8.3; VPS runs 8.4.16, WSL runs 8.4.13). Matches the harmless-pleasure stack. |
 | Database | **PostgreSQL 17** (prod) / 16 (WSL) | Already on the VPS. JSONB is what makes the translation model cheap. |
@@ -225,21 +227,22 @@ Sanctum (PAT only) · Spatie Translatable · Spatie Permission (admin roles)
 Pest · Larastan · Pint
 ```
 
-**`portfolio-client`**
+**`portfolio-client`** — versions verified against the live registry 2026-08-06
 
 ```
-Nuxt 4.5 · TypeScript (strict) · Vite 8
-Tailwind CSS v4 (CSS-first @theme, Vite plugin — no postcss, no JS config)
-PrimeVue 4 + @primevue/nuxt-module + tailwindcss-primeui
-Pinia 3 · @nuxtjs/i18n 10 · @nuxtjs/seo · @nuxt/image · @nuxt/fonts · @nuxt/icon
-Vitest · Playwright · @nuxt/eslint · vue-tsc
+Nuxt 4.5.2 · Vue 3.5 · TypeScript 6.0.3 (strict, pinned) · Vite 8
+Tailwind CSS v4.3 (CSS-first @theme, Vite plugin — no postcss, no JS config)
+No component library — hand-built primitives
+Pinia 4 · @nuxtjs/i18n 10 · @nuxtjs/seo · @nuxt/image 2 · @nuxt/fonts · @nuxt/icon 2
+Vitest 4 · Playwright · @nuxt/eslint · vue-tsc 3
 ```
 
 Notes that will bite if forgotten:
 
-- **Tailwind v4 has no `tailwind.config.js`.** Theme lives in CSS under `@theme`. The PrimeUI bridge must be the CSS version (`tailwindcss-primeui`), not the v3 JS plugin.
-- **PrimeVue is scoped by surface.** The admin gets the full kit — DataTable, FileUpload, Toast, ConfirmDialog — where it earns its bundle. Public pages get only Dialog, Select and Toast. Tree-shake via the module's `components.include`.
-- Theme the Aura preset with `definePreset()` mapping semantic tokens onto the eight palette variables, so PrimeVue inherits the brand instead of fighting it.
+- **Tailwind v4 has no `tailwind.config.js`.** Theme lives in CSS under `@theme`, loaded through `@tailwindcss/vite`.
+- **TypeScript must stay on 6.x.** `latest` on npm is 7.x, and installing it breaks `npm run typecheck` outright — Volar cannot consume the native compiler's API until 7.1. Do not let a dependency bump drag it forward.
+- **Pinia is 4.x and `@pinia/nuxt` is 1.x** — the module's major does not track the library's.
+- **No PrimeVue.** Dialogs, selects and toasts are built in session 5 on native elements: `<dialog>` gives a real focus trap, Escape handling and return focus for free, which is most of what defect 23 needs. The admin's DataTable and FileUpload equivalents are session 9's work and are the real cost of this trade.
 - **`@nuxtjs/i18n` v10 needs `seo: true`** to emit hreflang, and pairs with `@nuxtjs/sitemap` for per-locale alternates.
 
 ### 2.3 Runtime topology
@@ -367,18 +370,25 @@ Enforced in session 8, asserted in CI.
 
 ## 3. Local environment
 
-Verified 2026-08-06 on this machine:
+Verified 2026-08-06, updated by session 1:
 
 | Tool | Status |
 |---|---|
-| PHP 8.4.13 CLI | ✅ |
+| PHP 8.4.13 CLI | ✅ built by **phpbrew**, not apt — `~/.phpbrew/php/php-8.4.13` |
 | Composer 2.8.12 | ✅ |
 | Node 22.20.0 / npm 10.9.3 | ✅ |
 | PostgreSQL 16 server | ✅ running, accepting on `/var/run/postgresql:5432` |
-| Redis | ✅ running |
-| `gh` CLI 2.95.0 | ✅ authed as `SimonARG` |
+| Redis 7.0.15 | ✅ running on `127.0.0.1:6379` |
+| `gh` CLI 2.95.0 | ✅ authed as `SimonARG` — but see the scope caveat below |
 | ffmpeg | ⚠️ **not in WSL** — use `/mnt/d/Programs/ffmpeg/bin/ffmpeg.exe` with Windows paths |
-| PHP `intl`, `gd`/`imagick`, `redis` | ❌ **missing — session 1 installs these** |
+| PHP `intl`, `gd`, `redis` | ✅ **installed by session 1** |
+
+Environment facts worth knowing before they cost someone an hour:
+
+- **No passwordless sudo.** `apt install` is unavailable, so anything needing system packages has to be worked around. This is why the PHP extensions were compiled from the phpbrew source tree into `~/.phpbrew` rather than installed from a repo, and why `gd` was built without `--with-webp`: `libwebp-dev` could not be installed. That is fine — WebP and AVIF generation is ffmpeg's job in session 4, and `@nuxt/image` uses sharp, not gd.
+- **Postgres `simon` has `CREATEDB` but not `CREATEROLE`.** The plan's "dedicated local user" was therefore not possible; the local `portfolio` and `portfolio_test` databases are owned by `simon` over the unix socket, matching how the harmless-pleasure databases already work on this box. The dedicated `portfolio_user` is created properly on the VPS in session 10, where there is root.
+- **The `gh` OAuth token lacks the `workflow` scope** (`gist, read:org, repo` only), so pushes containing `.github/workflows/*.yml` are rejected. Fix once with `gh auth refresh -s workflow`.
+- **Rebuilding the PHP extensions**, if this ever needs redoing: `phpize && ./configure --with-php-config=~/.phpbrew/php/php-8.4.13/bin/php-config` inside `~/.phpbrew/build/php-8.4.13/ext/{intl,gd}`, then `pecl install redis`, with an `extension=NAME.so` line in `~/.phpbrew/php/php-8.4.13/var/db/cli/NAME.ini`.
 
 ---
 
@@ -508,12 +518,12 @@ Verified 2026-08-06 on this machine:
    - **Japanese needs its own face.** Neither family ships CJK, so today it renders in an OS fallback. Subset Noto Sans JP to exactly the glyphs used in the content (the set is small and known — extract it from the seeded DB), producing roughly 15–30 KB of woff2, loaded only for `locale=ja`.
    - Size-adjust fallback metrics to hold CLS under 0.02.
 3. **Icons via `@nuxt/icon`**, server-bundled so they inline as SVG and no CDN is touched: `@iconify-json/simple-icons` for brands (github, linkedin, instagram, facebook, lastdotfm, letterboxd) and `@iconify-json/tabler` for UI. This deletes Font Awesome and one blocking origin.
-4. **PrimeVue preset**: `definePreset()` over Aura mapping semantic tokens to the palette. `tailwindcss-primeui` for the bridge, with layer order set so Tailwind utilities win. Restrict registered components to what's actually used.
+4. **Base primitives, hand-built** (replaces the PrimeVue preset — see §6). `AppDialog` on native `<dialog>`, which gives a focus trap, Escape and return focus for free; `AppSelect` on native `<select>`; a small `useToast` composable. Everything themed straight from the tokens, so there is no preset to map and no third-party CSS to fight.
 5. **Motion primitives** as composables/utilities: the name sweep, the peek-slide, the clipped text-swap, card hover. Each honours `prefers-reduced-motion` — under reduced motion the sweep becomes an instant state change, slides become fades, nothing animates for longer than 100ms.
 6. **Layout** `layouts/default.vue`: background gradient (horizontal on desktop, vertical on mobile), the fixed peek menu, the footer. The menu is a real `<nav>` with a list, keyboard-operable, `:focus-visible` rings in `--3`.
 7. **i18n**: `strategy: 'prefix_except_default'`, default `es` → `/`, `/en`, `/ja`. Localised route paths (`/proyectos` vs `/projects`). `seo: true`. Browser detection cookie-based with `redirectOn: 'root'` and `alwaysRedirect: false` so crawlers are never bounced.
 8. **Pinia stores**: `useContentStore` (bootstrap payload, SSR-hydrated), `useLocaleStore`, `useUiStore` (open dialog, menu state).
-9. **Base components**: `AppButton` (with the `➔` tell), `AppDialog` (PrimeVue Dialog themed — real focus trap, Escape, return focus, fixing defect 23), `TechChip`, `LangPill`, `GlowPanel`.
+9. **Base components**: `AppButton` (with the `➔` tell), `AppDialog` (native `<dialog>` — real focus trap, Escape, return focus, fixing defect 23), `TechChip`, `LangPill`, `GlowPanel`.
 10. **Apply the contrast fix from defect 22**: `--4` for large text, borders and glows; `--3` for small text on dark. Verify every pair with a contrast checker and record the results.
 11. Storybook-less component gallery at `/_dev/components`, excluded from production builds and from the sitemap.
 
@@ -623,12 +633,12 @@ Verified 2026-08-06 on this machine:
 
 1. `/admin/**` as `ssr: false`, `robots: false`, excluded from the sitemap and code-split so the public bundle carries none of it.
 2. Login page, PAT stored appropriately, auto-refresh, logout, route middleware.
-3. **Projects**: PrimeVue DataTable with drag-reorder, create/edit form, Markdown editor with live preview, tech-tag multiselect, media pickers, publish toggle.
+3. **Projects**: a sortable table with drag-reorder, create/edit form, Markdown editor with live preview, tech-tag multiselect, media pickers, publish toggle. With PrimeVue gone this is hand-built — budget for it. Reorder via the native HTML drag-and-drop API or a small headless helper; do not pull in a heavyweight grid for one admin screen.
 4. **Translation editor**: the three locales side by side per field, with a clear indicator of what's missing. This is the piece that makes the JSONB model worth having.
-5. **Media library**: FileUpload with drag-drop, running the session-4 pipeline server-side, showing renditions and byte sizes, with alt-text editing per locale.
+5. **Media library**: an uploader on a native `<input type="file">` plus drop-zone events, running the session-4 pipeline server-side, showing renditions and byte sizes, with alt-text editing per locale.
 6. **Profile / socials / documents / technologies** CRUD.
 7. **Publish** action: bumps `content_version`, purges the Laravel cache, purges Nitro ISR, purges Cloudflare. Surface the result — a purge that silently failed is worse than no purge.
-8. Toast and ConfirmDialog throughout. Optimistic updates where safe, rollback on error.
+8. Toast and a confirm dialog throughout, both from the session-5 primitives. Optimistic updates where safe, rollback on error.
 9. Playwright happy path: log in, edit a project in all three languages, upload media, publish, confirm the public page reflects it.
 
 **Done when**
@@ -682,7 +692,8 @@ Read `~/portfolio/CLAUDE.md` and `~/harmless-pleasure/CLAUDE.md` first. The VPS 
 | Video re-encode degrades quality visibly | Side-by-side frame comparison at each quality step before committing; keep originals until session 10 signs off |
 | Cutover breaks a co-tenant on the shared nginx | `nginx -t` before every reload, separate PHP-FPM pool, staging host first |
 | Locale-prefixed URLs are new — the old single URL has whatever ranking it has | 301 the legacy paths (`/index.html`, `/projects.html`) to their new equivalents; submit the new sitemap; keep `x-default` pointing at `/` |
-| PrimeVue's weight leaking onto the landing page | Registered components restricted; bundle analysis asserted in CI against the 90 KB budget |
+| Hand-built dialogs and the admin table cost more session-5 and session-9 time than PrimeVue would have | Native `<dialog>` and `<select>` carry most of the behaviour; the admin table is the one genuinely new build, and session 9 has room. Bundle analysis still asserted in CI against the 90 KB budget |
+| A dependency bump silently drags TypeScript to 7 and breaks `vue-tsc` | Pinned to `~6.0.3` in `package.json`; CI runs `npm run typecheck` on every push, so a drag-forward fails the build rather than the developer's editor |
 | A session runs long and lands the tree broken | The §0 budget guard: stop, commit, defer explicitly, hand off |
 
 ---
@@ -693,7 +704,7 @@ Each session appends here before writing its handoff prompt. Keep it factual —
 
 | # | Session | Status | Notes |
 |---|---|---|---|
-| 1 | Foundations | ⬜ not started | |
+| 1 | Foundations | ✅ **done** 2026-08-06 | Both repos live and green. Details below. |
 | 2 | Data model | ⬜ not started | |
 | 3 | API | ⬜ not started | |
 | 4 | Media pipeline | ⬜ not started | |
@@ -704,42 +715,136 @@ Each session appends here before writing its handoff prompt. Keep it factual —
 | 9 | Admin panel | ⬜ not started | |
 | 10 | Deploy + cutover | ⬜ not started | |
 
+### Session 1 — what shipped
+
+**Repos** — [`SimonARG/portfolio-api`](https://github.com/SimonARG/portfolio-api) and [`SimonARG/portfolio-client`](https://github.com/SimonARG/portfolio-client), both public, cloned to `~/portfolio-api` and `~/portfolio-client`, `main` and `production` on each.
+
+**`portfolio-api`** — Laravel 13.24.0 on PHP 8.4.13, PostgreSQL, Redis (phpredis), Sanctum 4.3.3, Spatie Translatable 6.14.1, Spatie Permission 8.3.0. Pest 5.0.3, Larastan 3.10 at level 6, Pint. The Vite frontend layer was stripped — no `package.json`, no `resources/` — because nginx routes only `/api/*` here. `GET /api/v1/health` returns status, version, environment and per-dependency checks, and 503s when a dependency is down.
+
+**`portfolio-client`** — Nuxt 4.5.2, Vue 3.5.41, Vite 8, Tailwind 4.3.3 via `@tailwindcss/vite`, i18n 10.6, Pinia 4.0.2, `@nuxt/image` 2.1, `@nuxt/fonts` 0.14, `@nuxt/icon` 2.4 (server-bundled), ESLint 10, Vitest 4.1, Playwright 1.62, vue-tsc 3.3.9.
+
+**Gates, all passing:**
+
+| | `portfolio-api` | `portfolio-client` |
+|---|---|---|
+| Tests | Pest — 19 tests, 769 assertions | Vitest 8, Playwright 2 |
+| Static analysis | Larastan level 6, clean | `vue-tsc` strict, clean |
+| Format / lint | Pint, clean | ESLint, clean |
+| Build | — | `npm run build` succeeds |
+
+**Round trip proven end to end.** Playwright asserts against the raw HTML, not the hydrated DOM: if the payload only appeared after hydration, SSR would not really be working and a DOM assertion would not catch it.
+
+**Content inventory** — `portfolio-api/database/data/content-inventory.json`, the verbatim ES/EN/JA harvest: profile and About copy, 3 hero lines, 5 menu items, 6 social links, 2 CVs, 9 technologies, 6 projects, 13 UI strings, 15 media assets. `ContentInventoryTest` turns the plan's acceptance criterion into 16 executable assertions, so a later edit cannot quietly drop a locale or a project.
+
+Three things the harvest records rather than fixes, all for session 2 to decide:
+
+- **Source typos stay verbatim**, catalogued under `meta.source_defects` — including `PROYECTS`, `Porfolio`, `laconfiguración`, `Addding`, `shorcuts`, `adquire`, `maitaining`, `Creative Suit`, `móbiles`. Correcting Simón's copy is his call, not a silent edit.
+- **Japanese inline `font-size` overrides** live in a separate `legacy_style` field, never in content. Affected: About (`1.2rem`), all five menu labels (`1.1rem/600`, LinkedIn `1.5rem/600`), five of six social labels (`1.3rem/600`), the footer email label (`1rem`). That is the input to the session-5 CJK sizing work.
+- **The `menu_items.linkedin` Japanese label uses HALFWIDTH katakana** (`ﾘﾝｹﾄﾞｲﾝ`) where every other string on the site is fullwidth. Almost certainly unintentional; the fullwidth form is `リンクトイン`. Flag for Simón.
+
+**Design tokens** — `portfolio-client/app/assets/css/tokens.css`. Palette, both typefaces, glow elevations, the overshoot curve, signature gradients. Two deliberate changes: the stepped root font-size becomes one `clamp()` ramp (12px @ 360px → 20px @ 2560px), fixing defect 30 while keeping every legacy rem proportion; and semantic aliases encode the defect-22 contrast fix.
+
+**Baseline measurements** for later sessions to beat:
+
+| Metric | Now | Target |
+|---|---|---|
+| Legacy video, six files | 57,457,667 B (54.8 MiB) | < 8 MB (session 4) |
+| Client JS, all chunks gzipped | ~130 KB | < 90 KB on `/` (session 8) |
+
 ### Decisions revised mid-build
 
-_(append here — date, what changed, why)_
+**2026-08-06 — PrimeVue dropped entirely.** The plan specified PrimeVue 4 (§2.1, §2.2). Version checks found PrimeVue **5.0.0** is current and has moved to a **commercial licence** — it requires a key, verifies offline, and prints a console notice without one. PrimeVue **4.5.5 is still MIT and still shipping**, so pinning v4 was a real option. Simón chose the third path: drop the dependency.
+
+Rationale: the public surface was only Dialog, Select and Toast. Native `<dialog>` supplies a focus trap, Escape handling and return focus — most of what defect 23 needs — and native `<select>` covers the rest, with no licence question, no bundle cost, and nothing to re-theme. The cost is real and lands in session 9, where the admin's DataTable and FileUpload equivalents now have to be built. §2.1, §2.2, §4.5, §4.9 and §5 are updated accordingly.
+
+**2026-08-06 — TypeScript pinned to 6.x, not `latest`.** npm's `latest` is **7.0.2**, the Go-native compiler. Volar cannot consume its API, so `vue-tsc` fails outright and every project with `.vue` files is on TypeScript 6 until the 7.1 API ships. Nuxt 4.5 pins 6.0.3 itself. Recorded as a risk in §5 so a routine dependency bump does not quietly break `npm run typecheck`.
+
+**2026-08-06 — Pest 5 required raising the PHPUnit pin.** Pest 5 needs PHPUnit ^13.2.6; the Laravel 13 skeleton pins ^12.5.12. `laravel/framework` itself allows ^13.0.3, so the root constraint moved up rather than Pest moving down.
+
+**2026-08-06 — the test suite runs on PostgreSQL, not sqlite.** The stock `phpunit.xml` uses in-memory sqlite. The content model is JSONB throughout (§2.4) and sqlite cannot represent it faithfully, so an sqlite suite would pass while production broke. It also sidesteps this machine having no `pdo_sqlite` at all. CI uses a Postgres 17 service container — 17 rather than the 16 this workstation runs, so a version-specific JSONB problem surfaces in CI and not at cutover.
+
+**2026-08-06 — local Postgres user.** §4.1 called for a dedicated local user; `simon` has `CREATEDB` but not `CREATEROLE`, and there is no passwordless sudo. Local `portfolio` and `portfolio_test` are owned by `simon` over the unix socket, matching the existing harmless-pleasure databases on this box. The dedicated `portfolio_user` is still created properly on the VPS in session 10.
 
 ### Deferred work
 
-_(append here — item, deferred from session N to session M, why)_
+- **Pushing the two `.github/workflows/ci.yml` files → blocked on Simón.** Everything else is committed on `main` and `production` in both repos. The `gh` OAuth token carries `gist, read:org, repo` but not `workflow`, so GitHub rejects any push containing a workflow file. One-time fix:
+
+  ```bash
+  gh auth refresh -s workflow          # then, in each repo:
+  git push -u origin main && git push -u origin production
+  ```
+
+  Until that runs, **CI has never executed**, so "CI is green on both repos" is unverified rather than failing. The workflows are written and committed locally.
+
+- **Playwright in the client's CI → session 8.** The E2E suite needs PHP, PostgreSQL and Redis running alongside to serve the API. It runs locally today; session 8 wires it into CI with Lighthouse CI and axe-core.
+
+- **Playwright's full viewport matrix → session 6.** One project (1920×1080) is enabled; the other six from §2.7 are present but commented out, because there is no layout worth checking at 1280×720 or 3840×2160 until the real pages exist.
+
+- **`gd` has no WebP support.** `libwebp-dev` could not be installed without sudo. Not on any critical path: session 4 generates WebP and AVIF with ffmpeg, and `@nuxt/image` uses sharp.
 
 ---
 
-## 7. Starter prompt — Session 1
+## 7. Starter prompt — Session 2
 
 Paste this into a fresh session to begin.
 
 ```
-Session 1 of 10 — Foundations — of the simon-dev.com portfolio rebuild.
+Session 2 of 10 — Data model and content migration — of the simon-dev.com rebuild.
 
-Read /home/simon/portfolio/REBUILD_PLAN.md in full before doing anything. It is the
-single source of truth. Your scope is §4.1 exactly; §0 has the standing rules and the
-budget guard; §2 has the architecture and conventions; §3 lists what's already
-installed on this machine and what is missing.
+Read /home/simon/portfolio-api/REBUILD_PLAN.md in full before doing anything. It is
+the single source of truth. Your scope is §4.2 exactly; §0 has the standing rules and
+the budget guard; §2.4 has the schema and §2.6 the conventions; §6 records what
+session 1 actually shipped and what it deliberately left for you.
 
-Build the foundations: install the missing PHP extensions, create the portfolio-api
-and portfolio-client repos, scaffold Laravel 13 and Nuxt 4.5 with the full toolchain
-from §2.2, wire a typed API client, extract the design tokens, harvest the complete
-ES/EN/JA content inventory from the legacy site, and get CI green on both repos.
+Work in ~/portfolio-api. Session 1 left it green: Laravel 13.24 on PHP 8.4 with
+PostgreSQL, Redis, Sanctum, Spatie Translatable 6.14 and Spatie Permission 8.3;
+Pest 5 (19 tests, 769 assertions), Larastan level 6 and Pint all clean. Verify with
+`php artisan test`, `vendor/bin/phpstan analyse` and `vendor/bin/pint --test` before
+you change anything.
 
-Confirm current library versions against live documentation before pinning anything —
-Nuxt, Laravel, PrimeVue, Tailwind and @nuxtjs/i18n all moved during 2026 and the plan's
-version notes are from 2026-08-06.
+Build the data layer: migrations for the full §2.4 schema with JSONB translatable
+columns and GIN indexes, Eloquent models with HasTranslations, factories, and the
+seeders that read database/data/content-inventory.json. Convert the <br>-list project
+descriptions to Markdown and render sanitised HTML on save via a model observer.
+Add content_version to settings with the observer that bumps it. Cover it all with
+Pest: translation fallback, ordering, publish scopes, Markdown rendering and
+sanitisation, and seeder idempotency.
 
-Do not design any UI, do not model domain tables, and do not modify anything under
-/home/simon/portfolio beyond reading it and updating REBUILD_PLAN.md — that repo is
-still serving the live site.
+The inventory is complete and verbatim — treat it as the authority, not the legacy
+HTML. Each project carries both `description_legacy_html` (the source fragment) and
+`description_blocks` ({lead, items, sometimes trailing}), so the Markdown conversion
+is mechanical rather than interpretive. `meta.source_defects` catalogues everything
+deliberately left wrong.
 
-When you finish: update the progress ledger in §6, then print the starter prompt for
-Session 2 (Data model and content migration), adjusted for anything that actually
-changed.
+Five judgement calls are yours to make and to surface, not to decide silently:
+
+1. The `portfolio` project's description claims the site is vanilla HTML, CSS and
+   JavaScript, which this rebuild makes false. Rewrite it in all three languages —
+   and note the stack is now Nuxt 4 + Laravel 13 across two repos, and that PrimeVue
+   was dropped. Its technologies list and repo_url need revisiting too.
+2. The source typos in meta.source_defects. Ask Simón which to fix; do not silently
+   correct his copy, and do not silently keep it either.
+3. `menu_items.linkedin`'s Japanese label uses halfwidth katakana (ﾘﾝｹﾄﾞｲﾝ) where
+   every other string is fullwidth. Almost certainly a mistake.
+4. `social_links.rym` and both `documents` have no en/ja labels in the legacy markup —
+   a single untranslated span each. Decide whether to fill them or keep them as-is.
+5. Japanese inline font-size overrides are already isolated in `legacy_style` fields.
+   They are presentation and must not be seeded as content; §6 lists which strings
+   carried them, for session 5.
+
+Every DB mutation goes through a committed migration or seeder — no ad-hoc SQL.
+Atomic commits. `php artisan migrate:fresh --seed` must be idempotent: running it
+twice changes nothing.
+
+Note that `.github/workflows/ci.yml` is committed locally but has never been pushed —
+the gh token lacks the `workflow` scope (§6, Deferred work). If Simón has since run
+`gh auth refresh -s workflow`, push it and confirm CI actually goes green; if not,
+carry the deferral forward.
+
+Do not touch the client repo, and do not modify anything under /home/simon/portfolio
+beyond reading it — that repo is still serving the live site.
+
+When you finish: update the progress ledger in §6, sync REBUILD_PLAN.md across all
+three repos, then print the starter prompt for Session 3 (The API), adjusted for
+anything that actually changed.
 ```
