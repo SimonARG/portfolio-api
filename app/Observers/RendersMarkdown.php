@@ -64,10 +64,12 @@ class RendersMarkdown
                 continue;
             }
 
-            // Assigned as a whole map rather than one setTranslation() per
-            // locale, so a locale dropped from the source is dropped from the
-            // rendered output too instead of lingering as a stale translation.
-            $model->setAttribute($target, $rendered);
+            // replaceTranslations, NOT setAttribute: assigning a map merges it
+            // into the existing translations, so a locale dropped from the
+            // source would keep its old rendered HTML forever — the API would
+            // then serve a Japanese description for a project whose Japanese
+            // copy had been deleted.
+            $model->replaceTranslations($target, $rendered);
         }
     }
 }
