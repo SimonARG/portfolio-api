@@ -93,11 +93,18 @@ return [
     |
     */
 
-    'locale' => env('APP_LOCALE', 'en'),
+    /*
+     * Spanish is the site's default locale (REBUILD_PLAN.md §2.6), and the
+     * fallback chain is `requested → es`. These defaults are deliberately not
+     * Laravel's stock 'en': Spatie Translatable resolves a missing translation
+     * through config('app.fallback_locale'), so an absent APP_FALLBACK_LOCALE
+     * would silently make English the fallback for every JSONB column.
+     */
+    'locale' => env('APP_LOCALE', 'es'),
 
-    'fallback_locale' => env('APP_FALLBACK_LOCALE', 'en'),
+    'fallback_locale' => env('APP_FALLBACK_LOCALE', 'es'),
 
-    'faker_locale' => env('APP_FAKER_LOCALE', 'en_US'),
+    'faker_locale' => env('APP_FAKER_LOCALE', 'es_AR'),
 
     /*
     |--------------------------------------------------------------------------
